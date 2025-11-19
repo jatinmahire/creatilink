@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}User Management - Admin{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-12">
+    <h1 class="text-3xl font-bold mb-8">User Management</h1>
+    
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y">
+                {% for user in users.items %}
+                <tr>
+                    <td class="px-6 py-4">{{ user.full_name }}</td>
+                    <td class="px-6 py-4">{{ user.email }}</td>
+                    <td class="px-6 py-4">{{ user.role|title }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 rounded-full text-xs bg-{{ 'green' if user.is_active else 'red' }}-100 text-{{ 'green' if user.is_active else 'red' }}-800">
+                            {{ 'Active' if user.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if not user.is_admin %}
+                        <button onclick="toggleUserStatus({{ user.id }})" 
+                                class="text-orange-600 hover:text-orange-800 text-sm">
+                            {{ 'Deactivate' if user.is_active else 'Activate' }}
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+function toggleUserStatus(userId) {
+    if (confirm('Are you sure?')) {
+        fetch(`/admin/users/${userId}/toggle-status`, { method: 'POST' })
+            .then(() => window.location.reload());
+    }
+}
+</script>
+{% endblock %}

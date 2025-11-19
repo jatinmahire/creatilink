@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="relative">
+    <!-- Hero Section -->
+    <div class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+            <div class="text-center">
+                <h1 class="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
+                    Find Your Perfect Creative Professional
+                </h1>
+                <p class="text-xl md:text-2xl mb-8 text-indigo-100">
+                    Connect with talented designers, videographers, photographers, and video editors
+                </p>
+                <div class="flex justify-center space-x-4">
+                    <a href="{{ url_for('auth.signup') }}"
+                        class="bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition transform hover:scale-105">
+                        Get Started
+                    </a>
+                    <a href="{{ url_for('projects.list_projects') }}"
+                        class="border-white border-2 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-white hover:text-indigo-600 transition transform hover:scale-105">
+                        Browse Projects
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Section -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h2 class="text-3xl font-bold text-center mb-12">Explore Categories</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-indigo-600 text-4xl mb-4">
+                    <i class="fas fa-paintbrush"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Graphic Design</h3>
+                <p class="text-gray-600 mb-4">{{ category_stats.get('graphic_design', 0) }} creators</p>
+                <a href="{{ url_for('projects.list_projects', category='graphic_design') }}"
+                    class="text-indigo-600 hover:text-indigo-800 font-semibold">
+                    Explore <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-purple-600 text-4xl mb-4">
+                    <i class="fas fa-video"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Video Editing</h3>
+                <p class="text-gray-600 mb-4">{{ category_stats.get('video_editing', 0) }} creators</p>
+                <a href="{{ url_for('projects.list_projects', category='video_editing') }}"
+                    class="text-purple-600 hover:text-purple-800 font-semibold">
+                    Explore <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-pink-600 text-4xl mb-4">
+                    <i class="fas fa-camera"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Photography</h3>
+                <p class="text-gray-600 mb-4">{{ category_stats.get('photography', 0) }} creators</p>
+                <a href="{{ url_for('projects.list_projects', category='photography') }}"
+                    class="text-pink-600 hover:text-pink-800 font-semibold">
+                    Explore <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2">
+                <div class="text-red-600 text-4xl mb-4">
+                    <i class="fas fa-film"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Videography</h3>
+                <p class="text-gray-600 mb-4">{{ category_stats.get('videography', 0) }} creators</p>
+                <a href="{{ url_for('projects.list_projects', category='videography') }}"
+                    class="text-red-600 hover:text-red-800 font-semibold">
+                    Explore <i class="fas fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Featured Creators -->
+    {% if featured_creators %}
+    <div class="bg-gray-100 py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-center mb-12">Featured Creators</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {% for creator in featured_creators %}
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition">
+                    <div class="h-40 bg-gradient-to-br from-indigo-500 to-purple-600"></div>
+                    <div class="p-6 text-center relative">
+                        <img src="{{ creator.profile_image or '/static/images/default-avatar.png' }}"
+                            alt="{{ creator.full_name }}"
+                            class="w-24 h-24 rounded-full border-4 border-white mx-auto -mt-16 object-cover">
+                        <h3 class="text-xl font-bold mt-4">{{ creator.full_name }}</h3>
+                        <p class="text-gray-600">{{ creator.domain|replace('_', ' ')|title }}</p>
+                        <div class"flex items-center justify-center mt-2">
+                            <span class="text-yellow-500">
+                                {% for i in range(5) %}
+                                {% if i < creator.rating|int %} <i class="fas fa-star"></i>
+                                    {% else %}
+                                    <i class="far fa-star"></i>
+                                    {% endif %}
+                                    {% endfor %}
+                            </span>
+                            <span class="text-gray-600 ml-2">({{ creator.total_reviews }} reviews)</span>
+                        </div>
+                        <a href="{{ url_for('projects.creator_profile', creator_id=creator.id) }}"
+                            class="mt-4 inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                            View Profile
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- How It Works -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h2 class="text-3xl font-bold text-center mb-12">How It Works</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="text-center">
+                <div
+                    class="bg-indigo-100 text-indigo-600 w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                    1
+                </div>
+                <h3 class="text-xl font-bold mb-2">Post Your Project</h3>
+                <p class="text-gray-600">Describe what you need and set your budget</p>
+            </div>
+
+            <div class="text-center">
+                <div
+                    class="bg-purple-100 text-purple-600 w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                    2
+                </div>
+                <h3 class="text-xl font-bold mb-2">Get Matched</h3>
+                <p class="text-gray-600">Talented creators apply with proposals</p>
+            </div>
+
+            <div class="text-center">
+                <div
+                    class="bg-pink-100 text-pink-600 w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+                    3
+                </div>
+                <h3 class="text-xl font-bold mb-2">Collaborate</h3>
+                <p class="text-gray-600">Chat, pay securely, and receive deliverables</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Section -->
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl md:text-4xl font-bold mb-4">Ready to Bring Your Ideas to Life?</h2>
+            <p class="text-xl mb-8 text-indigo-100">Join thousands of customers and creators on CreatiLink</p>
+            <a href="{{ url_for('auth.signup') }}"
+                class="bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition transform hover:scale-105 inline-block">
+                Get Started Free
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Complete Your Profile - CreatiLink{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+    <div class="bg-white rounded-xl shadow-lg p-8">
+        <h2 class="text-3xl font-bold mb-2">Complete Your Creator Profile</h2>
+        <p class="text-gray-600 mb-8">Let's set up your portfolio to start getting projects</p>
+        
+        <form method="POST" enctype="multipart/form-data">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Domain</label>
+                    <select name="domain" required class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Select your specialty</option>
+                        <option value="graphic_design">Graphic Design</option>
+                        <option value="video_editing">Video Editing</option>
+                        <option value="photography">Photography</option>
+                        <option value="videography">Videography</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">Location</label>
+                    <input type="text" name="location" 
+                           class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           placeholder="City, Country">
+                </div>
+            </div>
+            
+            <div class="mt-6">
+                <label class="block text-gray-700 font-semibold mb-2">Bio</label>
+                <textarea name="bio" rows="4" required
+                          class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          placeholder="Tell us about yourself and your experience..."></textarea>
+            </div>
+            
+            <div class="mt-6">
+                <label class="block text-gray-700 font-semibold mb-2">Skills</label>
+                <input type="text" name="skills" required
+                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                       placeholder="e.g., Adobe Photoshop, Illustrator, Brand Design">
+                <p class="text-sm text-gray-500 mt-1">Separate skills with commas</p>
+            </div>
+            
+            <div class="mt-6">
+                <label class="block text-gray-700 font-semibold mb-2">Portfolio Files</label>
+                <input type="file" name="portfolio_files" id="portfolio_files" multiple accept="image/*,video/*"
+                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <p class="text-sm text-gray-500 mt-1">Upload images or videos of your best work</p>
+                <div id="portfolio_preview" class="mt-4 flex flex-wrap gap-2"></div>
+            </div>
+            
+            <div class="mt-8">
+                <button type="submit" 
+                        class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                    Complete Setup
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

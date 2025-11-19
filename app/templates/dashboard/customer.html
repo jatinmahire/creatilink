@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Customer Dashboard - CreatiLink{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-12">
+    <h1 class="text-3xl font-bold mb-8">Customer Dashboard</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-3xl font-bold text-indigo-600">{{ total_projects }}</div>
+            <div class="text-gray-600">Total Projects</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-3xl font-bold text-green-600">{{ active_projects }}</div>
+            <div class="text-gray-600">Active Projects</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-3xl font-bold text-blue-600">{{ completed_projects }}</div>
+            <div class="text-gray-600">Completed</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-3xl font-bold text-purple-600">₹{{ "%.2f"|format(total_spent) }}</div>
+            <div class="text-gray-600">Total Spent</div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-lg p-8">
+        <h2 class="text-2xl font-bold mb-6">My Projects</h2>
+        <div class="space-y-4">
+            {% for project in projects %}
+            <div class="border rounded-lg p-4 hover:shadow-md transition">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h3 class="font-bold text-lg">{{ project.title }}</h3>
+                        <p class="text-gray-600">{{ project.category|replace('_', ' ')|title }}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="inline-block bg-{{ 'green' if project.status == 'completed' else 'blue' }}-100 text-{{ 'green' if project.status == 'completed' else 'blue' }}-800 px-3 py-1 rounded-full text-sm">
+                            {{ project.status|title }}
+                        </span>
+                        <div class="font-bold mt-2">₹{{ project.budget }}</div>
+                    </div>
+                </div>
+                <div class="mt-4 flex space-x-2">
+                    <a href="{{ url_for('projects.detail', project_id=project.id) }}" 
+                       class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 text-sm">
+                        View Details
+                    </a>
+                    {% if project.assigned_to_id %}
+                    <a href="{{ url_for('chat.room', project_id=project.id) }}" 
+                       class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm">
+                        Chat
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

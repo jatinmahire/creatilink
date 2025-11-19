@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - STRIPE_PUBLIC_KEY=${STRIPE_PUBLIC_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+    volumes:
+      - .:/app
+      - uploads:/app/app/static/uploads
+    depends_on:
+      - db
+    command: python manage.py
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=creatilink
+      - POSTGRES_PASSWORD=creatilink
+      - POSTGRES_DB=creatilink
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+  uploads:

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Creator Dashboard - CreatiLink{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-12">
+    <h1 class="text-3xl font-bold mb-8">Creator Dashboard</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-3xl font-bold text-indigo-600">{{ active_jobs|length }}</div>
+            <div class="text-gray-600">Active Jobs</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-3xl font-bold text-green-600">{{ completed_jobs }}</div>
+            <div class="text-gray-600">Completed</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-3xl font-bold text-blue-600">{{ pending_applications }}</div>
+            <div class="text-gray-600">Pending Applications</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="text-3xl font-bold text-purple-600">₹{{ "%.2f"|format(total_earnings) }}</div>
+            <div class="text-gray-600">Total Earnings</div>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="bg-white rounded-xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold mb-6">Active Jobs</h2>
+            {% for job in active_jobs %}
+            <div class="border-b py-4">
+                <h3 class="font-bold">{{ job.title }}</h3>
+                <p class="text-gray-600 text-sm">{{ job.customer.full_name }}</p>
+                <div class="mt-2 flex space-x-2">
+                    <a href="{{ url_for('projects.detail', project_id=job.id) }}" 
+                       class="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700">
+                        View
+                    </a>
+                    <a href="{{ url_for('chat.room', project_id=job.id) }}" 
+                       class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                        Chat
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold mb-6">Recent Applications</h2>
+            {% for app in applications %}
+            <div class="border-b py-4">
+                <h3 class="font-bold">{{ app.project.title }}</h3>
+                <div class="flex justify-between text-sm mt-2">
+                    <span class="text-gray-600">Quote: ₹{{ app.quote }}</span>
+                    <span class="bg-{{ 'green' if app.status == 'accepted' else 'yellow' if app.status == 'pending' else 'red' }}-100 text-{{ 'green' if app.status == 'accepted' else 'yellow' if app.status == 'pending' else 'red' }}-800 px-2 py-1 rounded text-xs">
+                        {{ app.status|title }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
