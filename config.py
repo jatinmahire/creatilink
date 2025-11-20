@@ -6,7 +6,11 @@ load_dotenv()
 class Config:
     """Base configuration"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///creatilink.db'
+    # Render provides 'postgres://' but SQLAlchemy needs 'postgresql://'
+    uri = os.environ.get('DATABASE_URL')
+    if uri and uri.startswith('postgres://'):
+        uri = uri.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = uri or 'sqlite:///creatilink.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Upload settings
@@ -39,7 +43,7 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///creatilink.db'
+
 
 
 config = {
