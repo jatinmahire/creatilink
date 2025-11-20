@@ -61,52 +61,5 @@ def create_app(config_name='default'):
     # Create database tables
     with app.app_context():
         db.create_all()
-        
-        # Auto-seed database if empty (for free tier without shell access)
-        from app.models import User, Project, Application, Package, Review, Transaction
-        from datetime import datetime, timedelta
-        import random
-        
-        admin = User.query.filter_by(email='admin@creatilink.com').first()
-        
-        if not admin:
-            # Database is empty, seed it
-            print("Database is empty,initializing with seed data...")
-            
-            # Create admin
-            admin = User(
-                full_name="Admin User",
-                email="admin@creatilink.com",
-                role="customer",
-                is_admin=True
-            )
-            admin.set_password("admin123")
-            db.session.add(admin)
-            
-            # Create sample customer
-            customer = User(
-                full_name="John Smith",
-                email="john@example.com",
-                role="customer"
-            )
-            customer.set_password("password123")
-            db.session.add(customer)
-            
-            # Create sample creator
-            creator = User(
-                full_name="Emma Wilson",
-                email="emma@example.com",
-                role="creator",
-                domain="graphic_design",
-                bio="Professional graphic designer with 5+ years experience",
-                skills="Photoshop, Illustrator, InDesign",
-                rating=4.8,
-                total_reviews=10
-            )
-            creator.set_password("password123")
-            db.session.add(creator)
-            
-            db.session.commit()
-            print("Database initialized with basic accounts!")
     
     return app
