@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from sqlalchemy.pool import NullPool
 
 load_dotenv()
 
@@ -43,6 +44,10 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
+    # Use NullPool to avoid connection pool threading issues with eventlet
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'poolclass': NullPool,
+    }
 
 
 
