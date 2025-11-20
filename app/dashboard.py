@@ -14,6 +14,8 @@ def customer_dashboard():
         flash('Access denied.', 'warning')
         return redirect(url_for('main.index'))
     
+    from app import db
+    
     # Posted projects
     projects = Project.query.filter_by(posted_by_id=current_user.id).order_by(Project.created_at.desc()).all()
     
@@ -29,7 +31,6 @@ def customer_dashboard():
     ).scalar() or 0
     
     # Recent transactions
-    from app import db
     recent_transactions = Transaction.query.filter_by(customer_id=current_user.id).order_by(Transaction.created_at.desc()).limit(5).all()
     
     return render_template(
