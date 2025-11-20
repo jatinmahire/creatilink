@@ -6,7 +6,7 @@ function showToast(message, type = 'info') {
     toast.className = `toast ${type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'} text-white`;
     toast.textContent = message;
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
@@ -19,16 +19,16 @@ async function fetchJSON(url, options = {}) {
         const response = await fetch(url, {
             headers: {
                 'Content-Type': 'application/json',
-                 ...options.headers
+                ...options.headers
             },
             ...options
         });
-        
+
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Request failed');
         }
-        
+
         return await response.json();
     } catch (error) {
         showToast(error.message, 'error');
@@ -40,17 +40,17 @@ async function fetchJSON(url, options = {}) {
 function setupFormSubmit(formId, callback) {
     const form = document.getElementById(formId);
     if (!form) return;
-    
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+
         const formData = new FormData(form);
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
-        
+
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-        
+
         try {
             await callback(formData);
         } finally {
@@ -64,20 +64,20 @@ function setupFormSubmit(formId, callback) {
 function setupFilePreview(inputId, previewId) {
     const input = document.getElementById(inputId);
     const preview = document.getElementById(previewId);
-    
+
     if (!input || !preview) return;
-    
+
     input.addEventListener('change', (e) => {
         preview.innerHTML = '';
         const files = Array.from(e.target.files);
-        
+
         files.forEach((file, index) => {
             const reader = new FileReader();
-            
+
             reader.onload = (event) => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'file-preview';
-                
+
                 if (file.type.startsWith('image/')) {
                     const img = document.createElement('img');
                     img.src = event.target.result;
@@ -88,16 +88,16 @@ function setupFilePreview(inputId, previewId) {
                     video.controls = true;
                     wrapper.appendChild(video);
                 }
-                
+
                 const removeBtn = document.createElement('div');
                 removeBtn.className = 'remove-btn';
                 removeBtn.innerHTML = '&times;';
                 removeBtn.onclick = () => wrapper.remove();
                 wrapper.appendChild(removeBtn);
-                
+
                 preview.appendChild(wrapper);
             };
-            
+
             reader.readAsDataURL(file);
         });
     });
@@ -132,15 +132,15 @@ document.addEventListener('click', (e) => {
 function setupRating(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    
+
     const stars = container.querySelectorAll('i');
     const input = container.querySelector('input[type="hidden"]');
-    
+
     stars.forEach((star, index) => {
         star.addEventListener('click', () => {
             const rating = index + 1;
             input.value = rating;
-            
+
             stars.forEach((s, i) => {
                 if (i < rating) {
                     s.classList.remove('far');
@@ -151,7 +151,7 @@ function setupRating(containerId) {
                 }
             });
         });
-        
+
         star.addEventListener('mouseenter', () => {
             stars.forEach((s, i) => {
                 if (i <= index) {
@@ -160,7 +160,7 @@ function setupRating(containerId) {
             });
         });
     });
-    
+
     container.addEventListener('mouseleave', () => {
         const currentRating = parseInt(input.value) || 0;
         stars.forEach((s, i) => {
@@ -176,10 +176,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup file previews
     setupFilePreview('portfolio_files', 'portfolio_preview');
     setupFilePreview('attachments', 'attachments_preview');
-    
+
     // Setup ratings
     setupRating('rating-stars');
-    
+
+    // Profile dropdown toggle
+    const profileButton = document.getElementById('profileButton');
+    const profileMenu = document.getElementById('profileMenu');
+    const profileDropdown = document.getElementById('profileDropdown');
+
+    if (profileButton && profileMenu) {
+        // Toggle dropdown on button click
+        profileButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileMenu.classList.toggle('hidden');
+        });
+
+        // Keep dropdown open when hovering over it
+        profileDropdown.addEventListener('mouseenter', () => {
+            profileMenu.classList.remove('hidden');
+        });
+
+        profileDropdown.addEventListener('mouseleave', () => {
+            profileMenu.classList.add('hidden');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!profileDropdown.contains(e.target)) {
+                profileMenu.classList.add('hidden');
+            }
+        });
+    }
+
     // Auto-hide alerts after 5 seconds
     const alerts = document.querySelectorAll('.alert');
     alerts.forEach(alert => {

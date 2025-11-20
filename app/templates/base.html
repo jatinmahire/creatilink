@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CreatiLink - Connect with Creative Professionals{% endblock %}</title>
-    
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
-    
+
     <!-- Socket.IO for real-time features -->
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    
+
     {% block extra_head %}{% endblock %}
 </head>
+
 <body class="bg-gray-50">
     <!-- Navigation -->
     <nav class="bg-white shadow-lg sticky top-0 z-50">
@@ -26,63 +28,72 @@
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
                     <a href="{{ url_for('main.index') }}" class="flex items-center">
-                        <span class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        <span
+                            class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                             CreatiLink
                         </span>
                     </a>
                     <div class="hidden md:flex items-center ml-10 space-x-8">
-                        <a href="{{ url_for('projects.list_projects') }}" class="text-gray-700 hover:text-indigo-600 transition">Browse Projects</a>
-                        <a href="{{ url_for('main.how_it_works') }}" class="text-gray-700 hover:text-indigo-600 transition">How it Works</a>
+                        <a href="{{ url_for('projects.list_projects') }}"
+                            class="text-gray-700 hover:text-indigo-600 transition">Browse Projects</a>
+                        <a href="{{ url_for('main.how_it_works') }}"
+                            class="text-gray-700 hover:text-indigo-600 transition">How it Works</a>
                     </div>
                 </div>
-                
+
                 <div class="flex items-center space-x-4">
                     {% if current_user.is_authenticated %}
-                        <a href="{% if current_user.role == 'customer' %}{{ url_for('dashboard.customer_dashboard') }}{% else %}{{ url_for('dashboard.creator_dashboard') }}{% endif %}" 
-                           class="text-gray-700 hover:text-indigo-600 transition">
-                            <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
-                        </a>
-                        
-                        {% if current_user.role == 'customer' %}
-                            <a href="{{ url_for('projects.create') }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
-                                Post Project
+                    <a href="{% if current_user.role == 'customer' %}{{ url_for('dashboard.customer_dashboard') }}{% else %}{{ url_for('dashboard.creator_dashboard') }}{% endif %}"
+                        class="text-gray-700 hover:text-indigo-600 transition">
+                        <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
+                    </a>
+
+                    {% if current_user.role == 'customer' %}
+                    <a href="{{ url_for('projects.create') }}"
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+                        Post Project
+                    </a>
+                    {% endif %}
+
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('admin.dashboard') }}" class="text-orange-600 hover:text-orange-700 transition">
+                        <i class="fas fa-shield-alt mr-1"></i> Admin
+                    </a>
+                    {% endif %}
+
+                    <div class="relative" id="profileDropdown">
+                        <button id="profileButton"
+                            class="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 transition">
+                            <img src="{{ current_user.profile_image or '/static/images/default-avatar.png' }}"
+                                alt="{{ current_user.full_name }}" class="w-8 h-8 rounded-full object-cover">
+                            <span class="hidden md:block">{{ current_user.full_name }}</span>
+                            <i class="fas fa-chevron-down text-sm"></i>
+                        </button>
+                        <div id="profileMenu"
+                            class="absolute right-0 mt-2 w-48 bg-white shadow-xl rounded-lg py-2 hidden">
+                            <a href="{{ url_for('auth.profile') }}"
+                                class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-user mr-2"></i> Profile
                             </a>
-                        {% endif %}
-                        
-                        {% if current_user.is_admin %}
-                            <a href="{{ url_for('admin.dashboard') }}" class="text-orange-600 hover:text-orange-700 transition">
-                                <i class="fas fa-shield-alt mr-1"></i> Admin
+                            <a href="{{ url_for('payments.transactions') }}"
+                                class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-credit-card mr-2"></i> Transactions
                             </a>
-                        {% endif %}
-                        
-                        <div class="relative group">
-                            <button class="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 transition">
-                                <img src="{{ current_user.profile_image or '/static/images/default-avatar.png' }}" 
-                                     alt="{{ current_user.full_name }}" 
-                                     class="w-8 h-8 rounded-full object-cover">
-                                <span class="hidden md:block">{{ current_user.full_name }}</span>
-                                <i class="fas fa-chevron-down text-sm"></i>
-                            </button>
-                            <div class="absolute right-0 mt-2 w-48 bg-white shadow-xl rounded-lg py-2 hidden group-hover:block">
-                                <a href="{{ url_for('auth.profile') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                                    <i class="fas fa-user mr-2"></i> Profile
-                                </a>
-                                <a href="{{ url_for('payments.transactions') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                                    <i class="fas fa-credit-card mr-2"></i> Transactions
-                                </a>
-                                <hr class="my-2">
-                                <a href="{{ url_for('auth.logout') }}" class="block px-4 py-2 text-red-600 hover:bg-gray-100">
-                                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
-                                </a>
-                            </div>
+                            <hr class="my-2">
+                            <a href="{{ url_for('auth.logout') }}"
+                                class="block px-4 py-2 text-red-600 hover:bg-gray-100">
+                                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                            </a>
                         </div>
+                    </div>
                     {% else %}
-                        <a href="{{ url_for('auth.login') }}" class="text-gray-700 hover:text-indigo-600 transition">
-                            Login
-                        </a>
-                        <a href="{{ url_for('auth.signup') }}" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
-                            Sign Up
-                        </a>
+                    <a href="{{ url_for('auth.login') }}" class="text-gray-700 hover:text-indigo-600 transition">
+                        Login
+                    </a>
+                    <a href="{{ url_for('auth.signup') }}"
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+                        Sign Up
+                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -92,14 +103,15 @@
     <!-- Flash Messages -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} mb-4 p-4 rounded-lg {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'danger' %}bg-red-100 text-red-800{% elif category == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
-                        {{ message }}
-                        <button onclick="this.parentElement.remove()" class="float-right font-bold">&times;</button>
-                    </div>
-                {% endfor %}
-            {% endif %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div
+            class="alert alert-{{ category }} mb-4 p-4 rounded-lg {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'danger' %}bg-red-100 text-red-800{% elif category == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+            {{ message }}
+            <button onclick="this.parentElement.remove()" class="float-right font-bold">&times;</button>
+        </div>
+        {% endfor %}
+        {% endif %}
         {% endwith %}
     </div>
 
@@ -119,22 +131,27 @@
                 <div>
                     <h4 class="font-semibold mb-4">For Customers</h4>
                     <ul class="space-y-2 text-gray-400">
-                        <li><a href="{{ url_for('projects.create') }}" class="hover:text-white transition">Post a Project</a></li>
-                        <li><a href="{{ url_for('projects.list_projects') }}" class="hover:text-white transition">Browse Creators</a></li>
+                        <li><a href="{{ url_for('projects.create') }}" class="hover:text-white transition">Post a
+                                Project</a></li>
+                        <li><a href="{{ url_for('projects.list_projects') }}" class="hover:text-white transition">Browse
+                                Creators</a></li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="font-semibold mb-4">For Creators</h4>
                     <ul class="space-y-2 text-gray-400">
-                        <li><a href="{{ url_for('projects.list_projects') }}" class="hover:text-white transition">Find Work</a></li>
-                        <li><a href="{{ url_for('auth.profile_setup') }}" class="hover:text-white transition">Setup Profile</a></li>
+                        <li><a href="{{ url_for('projects.list_projects') }}" class="hover:text-white transition">Find
+                                Work</a></li>
+                        <li><a href="{{ url_for('auth.profile_setup') }}" class="hover:text-white transition">Setup
+                                Profile</a></li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="font-semibold mb-4">Company</h4>
                     <ul class="space-y-2 text-gray-400">
                         <li><a href="{{ url_for('main.about') }}" class="hover:text-white transition">About Us</a></li>
-                        <li><a href="{{ url_for('main.how_it_works') }}" class="hover:text-white transition">How it Works</a></li>
+                        <li><a href="{{ url_for('main.how_it_works') }}" class="hover:text-white transition">How it
+                                Works</a></li>
                     </ul>
                 </div>
             </div>
@@ -148,4 +165,5 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_scripts %}{% endblock %}
 </body>
+
 </html>
