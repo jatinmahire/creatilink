@@ -2,8 +2,12 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask_login import login_required, current_user
 from datetime import datetime
 import stripe
+import qrcode
+from io import BytesIO
+import base64
 from app import db
-from app.models import Project, Transaction, User
+from app.models import Project, Transaction, User, Notification
+from app.notification_helpers import create_notification, get_unread_count, mark_as_read, get_user_notifications
 
 payments_bp = Blueprint('payments', __name__, url_prefix='/payment')
 
@@ -12,6 +16,188 @@ def init_stripe():
     from flask import current_app
     stripe.api_key = current_app.config.get('STRIPE_SECRET_KEY')
 
+
+# ====================
+# UPI PAYMENT ROUTES
+# ====================
+
+@payments_bp.route('/confirm/<int:transaction_id>', methods=['POST'])
+@login_required
+def customer_confirm_payment(transaction_id):
+    """Customer confirms they made the UPI payment"""
+    transaction = Transaction.query.get_or_404(transaction_id)
+    project = Project.query.get(transaction.project_id)
+    
+    # Only customer can confirm
+    if current_user.id != transaction.customer_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Mark customer as confirmed
+    transaction.customer_confirmed = True
+    db.session.commit()
+    
+    # Notify creator to check payment
+    create_notification(
+        user_id=transaction.creator_id,
+        notification_type='payment_pending',
+        title='💰 Payment Confirmation Pending',
+        message=f'Customer has paid ₹{transaction.amount} for "{project.title}". Please check your UPI app and confirm receipt.',
+        project_id=project.id,
+        transaction_id=transaction_id
+    )
+    
+    flash('Payment confirmation sent! Waiting for creator to verify receipt.', 'success')
+    return jsonify({'success': True}), 200
+
+
+@payments_bp.route('/creator_confirm/<int:transaction_id>', methods=['POST'])
+@login_required
+def creator_confirm_payment(transaction_id):
+    """Creator confirms they received the payment"""
+    transaction = Transaction.query.get_or_404(transaction_id)
+    project = Project.query.get(transaction.project_id)
+    
+    # Only creator can confirm
+    if current_user.id != transaction.creator_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Mark creator as confirmed and complete transaction
+    transaction.creator_confirmed = True
+    transaction.payment_confirmed_at = datetime.utcnow()
+    transaction.status = 'completed'
+    transaction.completed_at = datetime.utcnow()
+    
+    # Update project status
+    project.status = 'completed'
+    project.completed_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    # Notify customer that payment is confirmed and link is unlocked
+    create_notification(
+        user_id=transaction.customer_id,
+        notification_type='payment_received',
+        title='✅ Payment Confirmed!',
+        message=f'Creator confirmed receiving ₹{transaction.amount} for "{project.title}". Delivery files are now accessible!',
+        project_id=project.id,
+        transaction_id=transaction_id
+    )
+    
+    flash('Payment confirmed! Customer can now access delivery files.', 'success')
+    return jsonify({'success': True}), 200
+
+
+@payments_bp.route('/creator_reject/<int:transaction_id>', methods=['POST'])
+@login_required
+def creator_reject_payment(transaction_id):
+    """Creator indicates payment not received"""
+    transaction = Transaction.query.get_or_404(transaction_id)
+    project = Project.query.get(transaction.project_id)
+    
+    # Only creator can reject
+    if current_user.id != transaction.creator_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Reset customer confirmation
+    transaction.customer_confirmed = False
+    db.session.commit()
+    
+    # Notify customer that payment not received
+    create_notification(
+        user_id=transaction.customer_id,
+        notification_type='payment_rejected',
+        title='❌ Payment Not Received',
+        message=f'Creator has not received payment for "{project.title}". Please check your UPI transaction and try again.',
+        project_id=project.id,
+        transaction_id=transaction_id
+    )
+    
+    flash('Customer has been notified that payment was not received.', 'info')
+    return jsonify({'success': True}), 200
+
+
+@payments_bp.route('/qr/<int:transaction_id>')
+@login_required
+def generate_qr(transaction_id):
+    """Generate UPI QR code for payment"""
+    transaction = Transaction.query.get_or_404(transaction_id)
+    creator = User.query.get(transaction.creator_id)
+    project = Project.query.get(transaction.project_id)
+    
+    # Only customer can view QR
+    if current_user.id != transaction.customer_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    if not creator.upi_id:
+        return jsonify({'error': 'Creator has not set up UPI ID'}), 400
+    
+    # Create UPI payment link
+    upi_url = f"upi://pay?pa={creator.upi_id}&pn={creator.full_name}&am={transaction.amount}&cu=INR&tn=Payment for {project.title}"
+    
+    # Generate QR code
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(upi_url)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert to base64
+    buffered = BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    return jsonify({
+        'qr_code': f"data:image/png;base64,{img_str}",
+        'upi_id': creator.upi_id,
+        'amount': transaction.amount,
+        'creator_name': creator.full_name
+    }), 200
+
+
+# ====================
+# NOTIFICATION ROUTES
+# ====================
+
+@payments_bp.route('/notifications/list')
+@login_required
+def list_notifications():
+    """Get user notifications"""
+    notifications = get_user_notifications(current_user.id, limit=20)
+    return jsonify([
+        {
+            'id': n.id,
+            'type': n.type,
+            'title': n.title,
+            'message': n.message,
+            'project_id': n.project_id,
+            'is_read': n.is_read,
+            'created_at': n.created_at.isoformat()
+        }
+        for n in notifications
+    ]), 200
+
+
+@payments_bp.route('/notifications/unread_count')
+@login_required
+def unread_count():
+    """Get unread notification count"""
+    count = get_unread_count(current_user.id)
+    return jsonify({'count': count}), 200
+
+
+@payments_bp.route('/notifications/mark_read/<int:notification_id>', methods=['POST'])
+@login_required
+def mark_notification_read(notification_id):
+    """Mark notification as read"""
+    notification = mark_as_read(notification_id)
+    if notification and notification.user_id == current_user.id:
+        return jsonify({'success': True}), 200
+    return jsonify({'error': 'Not found'}), 404
+
+
+# ====================
+# STRIPE ROUTES (existing)
+# ====================
 
 @payments_bp.route('/create', methods=['POST'])
 @login_required

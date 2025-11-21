@@ -4,7 +4,8 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 import os
 from app import db
-from app.models import Project, Application, User, Upload, Package, Review
+from app.models import Project, Application, User, Upload, Package, Review, Transaction
+from app.notification_helpers import create_notification
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 
@@ -262,6 +263,37 @@ def submit_delivery(project_id):
     project.delivery_note = delivery_note
     project.delivered_at = datetime.utcnow()
     project.status = 'delivered'
+    
+    # Create pending transaction for payment
+    # Get the application to find the quoted amount
+    application = Application.query.filter_by(
+        project_id=project_id,
+        creator_id=current_user.id,
+        status='accepted'
+    ).first()
+    
+    if application:
+        # Check if transaction already exists
+        existing = Transaction.query.filter_by(project_id=project_id).first()
+        if not existing:
+            transaction = Transaction(
+                project_id=project_id,
+                customer_id=project.posted_by_id,
+                creator_id=current_user.id,
+                amount=application.quote,
+                status='pending',
+                type='full'
+            )
+            db.session.add(transaction)
+            
+            # Notify customer about delivery
+            create_notification(
+                user_id=project.posted_by_id,
+                notification_type='delivery_submitted',
+                title='🎉 Delivery Received!',
+                message=f'{current_user.full_name} has submitted the delivery for "{project.title}". Please review and make payment.',
+                project_id=project_id
+            )
     
     db.session.commit()
     
