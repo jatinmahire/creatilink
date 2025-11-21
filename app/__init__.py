@@ -15,7 +15,7 @@ def create_app(config_name='default'):
     """Application factory"""
     app = Flask(__name__)
     
-    # Load configuration
+    #Load configuration
     from config import config
     app.config.from_object(config[config_name])
     
@@ -63,18 +63,15 @@ def create_app(config_name='default'):
         db.create_all()
         
         # Auto-migrate: Add delivery columns if they don't exist
-        # This runs on every startup - perfect for free tier!
+        # PostgreSQL requires separate ALTER TABLE statements (not comma-separated)
         try:
-            db.session.execute("""
-                ALTER TABLE projects 
-                ADD COLUMN IF NOT EXISTS delivery_link VARCHAR(500),
-                ADD COLUMN IF NOT EXISTS delivery_note TEXT,
-                ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;
-            """)
+            db.session.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivery_link VARCHAR(500);")
+            db.session.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivery_note TEXT;")
+            db.session.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;")
             db.session.commit()
-            print("✅ Database schema updated successfully!")
+            print("✅ Database migration completed successfully!")
         except Exception as e:
-            print(f"⚠️ Migration check: {e}")
+            print(f"⚠️ Migration error: {e}")
             db.session.rollback()
     
     return app
