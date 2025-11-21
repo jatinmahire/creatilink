@@ -17,6 +17,7 @@ def list_projects():
     max_budget = request.args.get('max_budget', type=float)
     search = request.args.get('search')
     status = request.args.get('status', 'open')
+    sort_by = request.args.get('sort', 'newest')
     page = request.args.get('page', 1, type=int)
     
     # Build query
@@ -36,10 +37,20 @@ def list_projects():
     if status:
         query = query.filter_by(status=status)
     
+    # Apply sorting
+    if sort_by == 'oldest':
+        query = query.order_by(Project.created_at.asc())
+    elif sort_by == 'price_low':
+        query = query.order_by(Project.budget.asc())
+    elif sort_by == 'price_high':
+        query = query.order_by(Project.budget.desc())
+    else:  # newest (default)
+        query = query.order_by(Project.created_at.desc())
+    
     # Paginate
     from flask import current_app
     per_page = current_app.config.get('PROJECTS_PER_PAGE', 12)
-    projects = query.order_by(Project.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    projects = query.paginate(page=page, per_page=per_page, error_out=False)
     
     return render_template('projects/list.html', projects=projects)
 
