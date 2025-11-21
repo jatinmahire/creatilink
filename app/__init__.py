@@ -61,5 +61,20 @@ def create_app(config_name='default'):
     # Create database tables
     with app.app_context():
         db.create_all()
+        
+        # Auto-migrate: Add delivery columns if they don't exist
+        # This runs on every startup - perfect for free tier!
+        try:
+            db.session.execute("""
+                ALTER TABLE projects 
+                ADD COLUMN IF NOT EXISTS delivery_link VARCHAR(500),
+                ADD COLUMN IF NOT EXISTS delivery_note TEXT,
+                ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;
+            """)
+            db.session.commit()
+            print("✅ Database schema updated successfully!")
+        except Exception as e:
+            print(f"⚠️ Migration check: {e}")
+            db.session.rollback()
     
     return app
