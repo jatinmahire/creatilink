@@ -30,6 +30,12 @@ def customer_dashboard():
         status='completed'
     ).scalar() or 0
     
+    # Pending payment (money in escrow)
+    pending_payment = db.session.query(func.sum(Transaction.amount)).filter_by(
+        customer_id=current_user.id,
+        status='pending'
+    ).scalar() or 0
+    
     # Recent transactions
     recent_transactions = Transaction.query.filter_by(customer_id=current_user.id).order_by(Transaction.created_at.desc()).limit(5).all()
     
@@ -40,6 +46,7 @@ def customer_dashboard():
         active_projects=active_projects,
         completed_projects=completed_projects,
         total_spent=total_spent,
+        pending_payment=pending_payment,
         recent_transactions=recent_transactions
     )
 
@@ -79,6 +86,12 @@ def creator_dashboard():
         status='completed'
     ).scalar() or 0
     
+    # Pending earnings (awaiting completion)
+    pending_earnings = db.session.query(func.sum(Transaction.amount)).filter_by(
+        creator_id=current_user.id,
+        status='pending'
+    ).scalar() or 0
+    
     # Recent earnings
     recent_earnings = Transaction.query.filter_by(
         creator_id=current_user.id,
@@ -101,6 +114,7 @@ def creator_dashboard():
         completed_jobs=completed_jobs,
         pending_applications=pending_applications,
         total_earnings=total_earnings,
+        pending_earnings=pending_earnings,
         recent_earnings=recent_earnings,
         unread_messages=unread_messages
     )

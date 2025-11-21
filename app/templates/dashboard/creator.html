@@ -23,6 +23,40 @@
         </div>
     </div>
 
+    <!-- Earnings Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div
+            class="bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg shadow-lg p-6 border-l-4 border-yellow-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm font-medium text-yellow-600 uppercase mb-1">
+                        <i class="fas fa-clock mr-1"></i> Pending Earnings
+                    </div>
+                    <div class="text-3xl font-bold text-yellow-700">₹{{ "%.2f"|format(pending_earnings) }}</div>
+                    <div class="text-sm text-yellow-600 mt-1">Awaiting project completion</div>
+                </div>
+                <div class="text-yellow-400">
+                    <i class="fas fa-coins text-5xl"></i>
+                </div>
+            </div>
+        </div>
+        <div
+            class="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-lg shadow-lg p-6 border-l-4 border-em erald-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm font-medium text-emerald-600 uppercase mb-1">
+                        <i class="fas fa-check-circle mr-1"></i> Available Balance
+                    </div>
+                    <div class="text-3xl font-bold text-emerald-700">₹{{ "%.2f"|format(total_earnings) }}</div>
+                    <div class="text-sm text-emerald-600 mt-1">Ready to withdraw</div>
+                </div>
+                <div class="text-emerald-400">
+                    <i class="fas fa-wallet text-5xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div class="bg-white rounded-xl shadow-lg p-8">
             <h2 class="text-2xl font-bold mb-6">Active Jobs</h2>
