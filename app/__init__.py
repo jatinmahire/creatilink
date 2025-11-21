@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
+from sqlalchemy import text
 import os
 
 # Initialize extensions
@@ -15,7 +16,7 @@ def create_app(config_name='default'):
     """Application factory"""
     app = Flask(__name__)
     
-    #Load configuration
+    # Load configuration
     from config import config
     app.config.from_object(config[config_name])
     
@@ -62,16 +63,17 @@ def create_app(config_name='default'):
     with app.app_context():
         db.create_all()
         
-        # Auto-migrate: Add delivery columns if they don't exist
-        # PostgreSQL requires separate ALTER TABLE statements (not comma-separated)
+        # Auto-migrate: Add delivery columns
         try:
-            db.session.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivery_link VARCHAR(500);")
-            db.session.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivery_note TEXT;")
-            db.session.execute("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;")
+            # Use text() wrapper for raw SQL (SQLAlchemy requirement)
+            db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivery_link VARCHAR(500);"))
+            db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivery_note TEXT;"))
+            db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;"))
             db.session.commit()
-            print("✅ Database migration completed successfully!")
+            print("✅ Migration successful - delivery columns added!")
         except Exception as e:
             print(f"⚠️ Migration error: {e}")
             db.session.rollback()
+            # Continue anyway - columns might already exist
     
     return app
