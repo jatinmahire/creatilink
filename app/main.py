@@ -2,7 +2,7 @@ from flask import Blueprint, render_template
 from app.models import User, Project
 from sqlalchemy import func
 
-main_bp = Blueprint('main', __name__)
+main_bp = Blueprint('main', __name__())
 
 @main_bp.route('/')
 def index():
@@ -43,3 +43,15 @@ def about():
 def how_it_works():
     """How it works page"""
     return render_template('how_it_works.html')
+
+
+@main_bp.route('/faq')
+def faq():
+    """FAQ page"""
+    return render_template('faq.html')
+
+
+@main_bp.route('/contact')
+def contact():
+    """Contact page"""
+    return render_template('contact.html')

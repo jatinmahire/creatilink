@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}FAQ - CreatiLink{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-12">
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h1>
+        <p class="text-gray-600">Find answers to common questions about CreatiLink</p>
+    </div>
+
+    <!-- Search FAQ -->
+    <div class="mb-8">
+        <input type="text" id="faqSearch" placeholder="Search FAQs..."
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+    </div>
+
+    <!-- FAQ Categories -->
+    <div class="space-y-6">
+        <!-- General Questions -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-6">General Questions</h2>
+
+            <div class="space-y-4">
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">What is CreatiLink?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        CreatiLink is a platform that connects customers with creative professionals. Whether you need
+                        graphic design, video editing, photography, or videography services, we help you find and hire
+                        the perfect creator for your project.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">Is CreatiLink free to use?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        Yes! CreatiLink is free for both customers and creators. We charge a small platform fee (10%)
+                        only when a project is successfully completed and paid.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">How do I get started?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        Simply sign up, choose whether you're a customer or creator, complete your profile, and you're
+                        ready to go! Customers can begin posting projects, and creators can start browsing and applying
+                        to available projects.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- For Customers -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-6">For Customers</h2>
+
+            <div class="space-y-4">
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">How do I post a project?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        After logging in, click "Post Project" in the navigation bar. Fill in project details including
+                        title, description, category, budget, and deadline. Creators will then apply to your project
+                        with their quotes.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">How do I choose a creator?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        Review applications from creators, check their profiles, portfolios, and ratings. Compare quotes
+                        and timelines, then assign the creator that best fits your needs.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">How does payment work?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        We use Stripe for secure payments. Pay when you accept a creator's quote. The creator receives
+                        payment after the project is marked as complete. We charge a 10% platform fee.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">What if I'm not satisfied with the work?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        Communicate with your creator about any concerns. Most creators offer revisions. If issues
+                        persist, contact our support team for assistance.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- For Creators -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-6">For Creators</h2>
+
+            <div class="space-y-4">
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">How do I find projects?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        Browse available projects in the "Browse Projects" section. Filter by category, budget, or
+                        search keywords to find projects that match your skills.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">How do I apply to projects?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        Click on a project, read the requirements, and submit your application with your quote,
+                        timeline, and a personalized message explaining why you're the best fit.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">When do I get paid?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        Payment is released after the customer marks the project as complete. Funds are transferred to
+                        your account minus the 10% platform fee.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">How do I build my profile?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        Complete your profile with a professional bio, list your skills, upload portfolio samples, and
+                        complete projects successfully to earn reviews and build your reputation.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments & Fees -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-6">Payments & Fees</h2>
+
+            <div class="space-y-4">
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">What payment methods do you accept?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        We use Stripe to process payments, which accepts all major credit cards, debit cards, and
+                        digital wallets.
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">What currency do you use?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        All transactions on CreatiLink are in Indian Rupees (₹ INR).
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button
+                        class="faq-question w-full text-left flex justify-between items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                        <span class="font-semibold text-gray-900">Are there any hidden fees?</span>
+                        <i class="fas fa-chevron-down text-gray-400"></i>
+                    </button>
+                    <div class="faq-answer hidden p-4 text-gray-700">
+                        No hidden fees! We only charge a transparent 10% platform fee on completed projects. This fee is
+                        clearly shown before any transaction.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Still Have Questions? -->
+    <div class="mt-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg p-8 text-center text-white">
+        <h2 class="text-2xl font-bold mb-4">Still Have Questions?</h2>
+        <p class="mb-6">Can't find what you're looking for? We're here to help!</p>
+        <a href="{{ url_for('main.contact') }}"
+            class="bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition inline-block">
+            Contact Support
+        </a>
+    </div>
+</div>
+
+<script>
+    // FAQ Toggle
+    document.addEventListener('DOMContentLoaded', () => {
+        const questions = document.querySelectorAll('.faq-question');
+
+        questions.forEach(question => {
+            question.addEventListener('click', () => {
+                const answer = question.nextElementSibling;
+                const icon = question.querySelector('i');
+
+                answer.classList.toggle('hidden');
+                icon.classList.toggle('fa-chevron-down');
+                icon.classList.toggle('fa-chevron-up');
+            });
+        });
+
+        // Search FAQs
+        const searchInput = document.getElementById('faqSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const faqItems = document.querySelectorAll('.faq-item');
+
+                faqItems.forEach(item => {
+                    const questionText = item.querySelector('.faq-question span').textContent.toLowerCase();
+                    const answerText = item.querySelector('.faq-answer').textContent.toLowerCase();
+
+                    if (questionText.includes(searchTerm) || answerText.includes(searchTerm)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>
+
+{% endblock %}
