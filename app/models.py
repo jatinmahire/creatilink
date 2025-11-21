@@ -75,6 +75,11 @@ class Project(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     
+    # Delivery fields (Drive link instead of file upload)
+    delivery_link = db.Column(db.String(500))  # Google Drive/Dropbox link
+    delivery_note = db.Column(db.Text)  # Creator's delivery message
+    delivered_at = db.Column(db.DateTime)  # When creator submitted delivery
+    
     # Relationships
     applications = db.relationship('Application', backref='project', lazy='dynamic', cascade='all, delete-orphan')
     messages = db.relationship('Message', backref='project', lazy='dynamic', cascade='all, delete-orphan')
