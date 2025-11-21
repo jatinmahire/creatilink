@@ -21,6 +21,9 @@ class User(UserMixin, db.Model):
     rating = db.Column(db.Float, default=0.0)
     total_reviews = db.Column(db.Integer, default=0)
     
+    # Payment details (for creators)
+    upi_id = db.Column(db.String(100))  # Creator's UPI ID for payments
+    
     # Profile image
     profile_image = db.Column(db.String(255))
     
@@ -149,6 +152,12 @@ class Transaction(db.Model):
     stripe_payment_intent = db.Column(db.String(255))
     provider_payload = db.Column(db.Text)  # JSON string
     
+    # UPI Payment Confirmation Fields
+    customer_confirmed = db.Column(db.Boolean, default=False)  # Customer paid
+    creator_confirmed = db.Column(db.Boolean, default=False)  # Creator received
+    payment_confirmed_at = db.Column(db.DateTime)  # When both confirmed
+    payment_screenshot = db.Column(db.String(500))  # Optional proof
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     
@@ -221,3 +230,32 @@ class Upload(db.Model):
     
     def __repr__(self):
         return f'<Upload {self.original_filename}>'
+
+
+class Notification(db.Model):
+    """Notification model for payment and delivery updates"""
+    __tablename__ = 'notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Notification details
+    type = db.Column(db.String(50), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    
+    # Related entities
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'))
+    
+    # Status
+    is_read = db.Column(db.Boolean, default=False)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='notifications')
+    project = db.relationship('Project', backref='notifications')
+    
+    def __repr__(self):
+        return f'<Notification {self.id}: {self.type}>'

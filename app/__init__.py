@@ -63,17 +63,41 @@ def create_app(config_name='default'):
     with app.app_context():
         db.create_all()
         
-        # Auto-migrate: Add delivery columns
+        # Auto-migrate: Add payment system columns
         try:
-            # Use text() wrapper for raw SQL (SQLAlchemy requirement)
+            # Delivery columns (existing)
             db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivery_link VARCHAR(500);"))
             db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivery_note TEXT;"))
             db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP;"))
+            
+            # Payment columns for users
+            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100);"))
+            
+            # Payment confirmation columns for transactions
+            db.session.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS customer_confirmed BOOLEAN DEFAULT FALSE;"))
+            db.session.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS creator_confirmed BOOLEAN DEFAULT FALSE;"))
+            db.session.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS payment_confirmed_at TIMESTAMP;"))
+            db.session.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS payment_screenshot VARCHAR(500);"))
+            
+            # Create notifications table
+            db.session.execute(text("""
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id),
+                    type VARCHAR(50) NOT NULL,
+                    title VARCHAR(200) NOT NULL,
+                    message TEXT NOT NULL,
+                    project_id INTEGER REFERENCES projects(id),
+                    transaction_id INTEGER REFERENCES transactions(id),
+                    is_read BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """))
+            
             db.session.commit()
-            print("✅ Migration successful - delivery columns added!")
+            print("✅ Payment system migration successful!")
         except Exception as e:
             print(f"⚠️ Migration error: {e}")
             db.session.rollback()
-            # Continue anyway - columns might already exist
     
     return app
