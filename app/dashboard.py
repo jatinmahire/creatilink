@@ -69,9 +69,9 @@ def creator_dashboard():
     
     from app import db
     
-    # Active jobs (assigned to me)
+    # Active jobs (assigned to me) - Include delivered for payment tracking
     active_jobs = Project.query.filter_by(assigned_to_id=current_user.id).filter(
-        Project.status.in_(['assigned', 'in_progress'])
+        Project.status.in_(['assigned', 'in_progress', 'delivered'])
     ).all()
     
     # My applications
