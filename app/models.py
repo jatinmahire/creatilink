@@ -166,6 +166,7 @@ class Transaction(db.Model):
     creator_confirmed = db.Column(db.Boolean, default=False)  # Creator received
     payment_confirmed_at = db.Column(db.DateTime)  # When both confirmed
     payment_screenshot = db.Column(db.String(500))  # Optional proof
+    screenshot_uploaded_at = db.Column(db.DateTime, nullable=True)  # Upload timestamp
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime)

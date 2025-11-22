@@ -1,6 +1,8 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_from_directory
 from flask_login import login_required, current_user
 from datetime import datetime
+from werkzeug.utils import secure_filename
+import os
 import stripe
 import qrcode
 from io import BytesIO
@@ -31,6 +33,30 @@ def customer_confirm_payment(transaction_id):
     # Only customer can confirm
     if current_user.id != transaction.customer_id:
         return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Handle file upload (screenshot)
+    if 'screenshot' in request.files:
+        file = request.files['screenshot']
+        if file and file.filename:
+            # Validate file type
+            allowed_extensions = {'png', 'jpg', 'jpeg', 'pdf', 'webp'}
+            filename = secure_filename(file.filename)
+            file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            
+            if file_ext in allowed_extensions:
+                # Create unique filename
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                new_filename = f"payment_{transaction_id}_{timestamp}.{file_ext}"
+                
+                # Save file
+                upload_folder = os.path.join('app', 'static', 'payment_screenshots')
+                os.makedirs(upload_folder, exist_ok=True)
+                filepath = os.path.join(upload_folder, new_filename)
+                file.save(filepath)
+                
+                # Save path to database
+                transaction.payment_screenshot = f'payment_screenshots/{new_filename}'
+                transaction.screenshot_uploaded_at = datetime.utcnow()
     
     # Mark customer as confirmed
     transaction.customer_confirmed = True
