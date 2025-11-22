@@ -115,9 +115,18 @@ def creator_dashboard():
         ).filter(Message.sender_id != current_user.id).count()
         unread_messages += unread
     
+    # Get transactions for delivered jobs (for payment status)
+    job_transactions = {}
+    for job in active_jobs:
+        if job.status == 'delivered':
+            trans = Transaction.query.filter_by(project_id=job.id).first()
+            if trans:
+                job_transactions[job.id] = trans
+    
     return render_template(
         'dashboard/creator.html',
         active_jobs=active_jobs,
+        job_transactions=job_transactions,
         applications=applications,
         completed_jobs=completed_jobs,
         pending_applications=pending_applications,
