@@ -317,15 +317,164 @@ def projects():
 @admin_bp.route('/transactions')
 @admin_required
 def transactions():
-    """View all transactions"""
+    """View all transactions with advanced filters"""
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status')
+    search = request.args.get('search')
+    min_amount = request.args.get('min_amount', type=float)
+    max_amount = request.args.get('max_amount', type=float)
     
     query = Transaction.query
     
+    # Filters
     if status:
         query = query.filter_by(status=status)
+    if search:
+        # Search by project title or user names
+        query = query.join(Project).filter(Project.title.ilike(f'%{search}%'))
+    if min_amount:
+        query = query.filter(Transaction.amount >= min_amount)
+    if max_amount:
+        query = query.filter(Transaction.amount <= max_amount)
     
     transactions = query.order_by(Transaction.created_at.desc()).paginate(page=page, per_page=20, error_out=False)
     
-    return render_template('admin/transactions.html', transactions=transactions)
+    # Analytics
+    total_completed = db.session.query(func.sum(Transaction.amount)).filter_by(status='completed').scalar() or 0
+    total_pending = db.session.query(func.sum(Transaction.amount)).filter_by(status='pending').scalar() or 0
+    total_refunded = db.session.query(func.sum(Transaction.amount)).filter_by(status='refunded').scalar() or 0
+    platform_earnings = total_completed * 0.10  # 10% platform fee
+    
+    return render_template(
+        'admin/transactions.html',
+        transactions=transactions,
+        total_completed=total_completed,
+        total_pending=total_pending,
+        total_refunded=total_refunded,
+        platform_earnings=platform_earnings
+    )
+
+
+@admin_bp.route('/transactions/<int:transaction_id>/details')
+@admin_required
+def transaction_details(transaction_id):
+    """Get transaction details for modal"""
+    txn = Transaction.query.get_or_404(transaction_id)
+    
+    return jsonify({
+        'success': True,
+        'transaction': {
+            'id': txn.id,
+            'amount': txn.amount,
+            'status': txn.status,
+            'created_at': txn.created_at.strftime('%Y-%m-%d %H:%M'),
+            'payment_confirmed_at': txn.payment_confirmed_at.strftime('%Y-%m-%d %H:%M') if txn.payment_confirmed_at else 'N/A',
+            'customer_confirmed': txn.customer_confirmed,
+            'creator_confirmed': txn.creator_confirmed,
+            'payment_screenshot': txn.payment_screenshot
+        },
+        'project': {
+            'id': txn.project.id,
+            'title': txn.project.title,
+            'budget': txn.project.budget,
+            'status': txn.project.status
+        },
+        'customer': {
+            'id': txn.customer.id,
+            'name': txn.customer.full_name,
+            'email': txn.customer.email
+        },
+        'creator': {
+            'id': txn.creator.id,
+            'name': txn.creator.full_name,
+            'email': txn.creator.email
+        }
+    })
+
+
+@admin_bp.route('/transactions/<int:transaction_id>/refund', methods=['POST'])
+@admin_required
+def refund_transaction(transaction_id):
+    """Manual refund for a transaction"""
+    txn = Transaction.query.get_or_404(transaction_id)
+    
+    if txn.status == 'refunded':
+        return jsonify({'error': 'Transaction already refunded'}), 400
+    
+    reason = request.form.get('reason', 'Admin refund')
+    
+    # Update transaction status
+    txn.status = 'refunded'
+    db.session.commit()
+    
+    # TODO: Add notification to customer and creator
+    
+    flash(f'Transaction #{txn.id} has been refunded. Amount: ₹{txn.amount}', 'success')
+    return jsonify({'success': True, 'message': 'Transaction refunded'}), 200
+
+
+@admin_bp.route('/transactions/<int:transaction_id>/release', methods=['POST'])
+@admin_required  
+def release_escrow(transaction_id):
+    """Force release escrow payment to creator"""
+    txn = Transaction.query.get_or_404(transaction_id)
+    
+    if txn.status == 'completed':
+        return jsonify({'error': 'Transaction already completed'}), 400
+    
+    if txn.status == 'refunded':
+        return jsonify({'error': 'Transaction was refunded'}), 400
+    
+    # Mark as completed
+    txn.status = 'completed'
+    txn.customer_confirmed = True
+    txn.creator_confirmed = True
+    txn.payment_confirmed_at = datetime.utcnow()
+    
+    # Also mark project as completed if not already
+    if txn.project.status != 'completed':
+        txn.project.status = 'completed'
+    
+    db.session.commit()
+    
+    # TODO: Add notification to creator about payment release
+    
+    flash(f'Escrow released! ₹{txn.amount} paid to {txn.creator.full_name}', 'success')
+    return jsonify({'success': True, 'message': 'Escrow released'}), 200
+
+
+@admin_bp.route('/transactions/export')
+@admin_required
+def export_transactions():
+    """Export all transactions to CSV"""
+    import csv
+    from io import StringIO
+    from flask import make_response
+    
+    transactions = Transaction.query.all()
+    
+    si = StringIO()
+    writer = csv.writer(si)
+    
+    # Header
+    writer.writerow(['ID', 'Amount', 'Status', 'Project', 'Customer', 'Creator', 'Date', 'Customer Confirmed', 'Creator Confirmed'])
+    
+    # Data
+    for txn in transactions:
+        writer.writerow([
+            txn.id,
+            txn.amount,
+            txn.status,
+            txn.project.title,
+            txn.customer.full_name,
+            txn.creator.full_name,
+            txn.created_at.strftime('%Y-%m-%d'),
+            'Yes' if txn.customer_confirmed else 'No',
+            'Yes' if txn.creator_confirmed else 'No'
+        ])
+    
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=transactions_export.csv"
+    output.headers["Content-type"] = "text/csv"
+    
+    return output

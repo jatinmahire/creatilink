@@ -1,0 +1,413 @@
+{% extends "admin/base.html" %}
+{% block title %}Transaction Management{% endblock %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-money-bill-wave text-purple-600 mr-2"></i>
+            Transaction Management
+        </h2>
+        <a href="{{ url_for('admin.export_transactions') }}"
+            class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+            <i class="fas fa-download mr-2"></i>Export CSV
+        </a>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="text-sm opacity-90 mb-1">Total Completed</div>
+            <div class="text-3xl font-bold">₹{{ "%.0f"|format(total_completed) }}</div>
+            <div class="text-xs mt-2 opacity-75">Released to creators</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="text-sm opacity-90 mb-1">In Escrow</div>
+            <div class="text-3xl font-bold">₹{{ "%.0f"|format(total_pending) }}</div>
+            <div class="text-xs mt-2 opacity-75">Pending completion</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="text-sm opacity-90 mb-1">Total Refunded</div>
+            <div class="text-3xl font-bold">₹{{ "%.0f"|format(total_refunded) }}</div>
+            <div class="text-xs mt-2 opacity-75">Cancelled transactions</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="text-sm opacity-90 mb-1">Platform Earnings</div>
+            <div class="text-3xl font-bold">₹{{ "%.0f"|format(platform_earnings) }}</div>
+            <div class="text-xs mt-2 opacity-75">10% commission</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+                <label class="block text-sm font-semibold mb-2">Search Project</label>
+                <input type="text" name="search" value="{{ request.args.get('search', '') }}"
+                    placeholder="Project name..."
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-2">Status</label>
+                <select name="status" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <option value="">All Status</option>
+                    <option value="pending" {% if request.args.get('status')=='pending' %}selected{% endif %}>Pending
+                    </option>
+                    <option value="completed" {% if request.args.get('status')=='completed' %}selected{% endif %}>
+                        Completed</option>
+                    <option value="refunded" {% if request.args.get('status')=='refunded' %}selected{% endif %}>Refunded
+                    </option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-2">Min Amount</label>
+                <input type="number" name="min_amount" value="{{ request.args.get('min_amount', '') }}" placeholder="₹0"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-2">Max Amount</label>
+                <input type="number" name="max_amount" value="{{ request.args.get('max_amount', '') }}"
+                    placeholder="₹100000" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500">
+            </div>
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 flex-1">
+                    <i class="fas fa-search mr-2"></i>Filter
+                </button>
+                <a href="{{ url_for('admin.transactions') }}"
+                    class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300">
+                    <i class="fas fa-times"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">ID</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Project</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Amount</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Customer</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Creator</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for txn in transactions.items %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-sm text-gray-600">#{{ txn.id }}</td>
+                        <td class="px-6 py-4">
+                            <div class="font-semibold text-gray-900">{{ txn.project.title[:30] }}...</div>
+                            <div class="text-xs text-gray-500">ID: {{ txn.project.id }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-lg text-purple-600">₹{{ txn.amount }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm">{{ txn.customer.full_name }}</div>
+                            <div class="text-xs text-gray-500">{{ txn.customer.email }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm">{{ txn.creator.full_name }}</div>
+                            <div class="text-xs text-gray-500">{{ txn.creator.email }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+                                         bg-{{ 'green' if txn.status == 'completed' else 'yellow' if txn.status == 'pending' else 'red' }}-100 
+                                         text-{{ 'green' if txn.status == 'completed' else 'yellow' if txn.status == 'pending' else 'red' }}-700">
+                                <i class="fas fa-circle text-xs mr-1"></i>
+                                {{ txn.status|title }}
+                            </span>
+                            {% if txn.customer_confirmed and txn.creator_confirmed %}
+                            <div class="text-xs text-green-600 mt-1">✓ Both Confirmed</div>
+                            {% elif txn.customer_confirmed %}
+                            <div class="text-xs text-yellow-600 mt-1">Customer Confirmed</div>
+                            {% elif txn.creator_confirmed %}
+                            <div class="text-xs text-yellow-600 mt-1">Creator Confirmed</div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {{ txn.created_at.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex justify-center space-x-2">
+                                <!-- View Details -->
+                                <button onclick="viewTransactionDetails({{ txn.id }})"
+                                    class="text-blue-600 hover:text-blue-800" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+
+                                {% if txn.status != 'refunded' %}
+                                <!-- Refund -->
+                                <button onclick="refundTransaction({{ txn.id }}, {{ txn.amount }})"
+                                    class="text-red-600 hover:text-red-800" title="Refund Transaction">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                {% endif %}
+
+                                {% if txn.status == 'pending' %}
+                                <!-- Force Release -->
+                                <button
+                                    onclick="releaseEscrow({{ txn.id }}, {{ txn.amount }}, '{{ txn.creator.full_name }}')"
+                                    class="text-green-600 hover:text-green-800" title="Release Escrow">
+                                    <i class="fas fa-unlock"></i>
+                                </button>
+                                {% endif %}
+
+                                {% if txn.payment_screenshot %}
+                                <!-- View Screenshot -->
+                                <a href="/static/payment_screenshots/{{ txn.payment_screenshot }}" target="_blank"
+                                    class="text-purple-600 hover:text-purple-800" title="View Payment Screenshot">
+                                    <i class="fas fa-image"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-money-bill-wave text-4xl mb-4 opacity-50"></i>
+                            <p>No transactions found</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if transactions.pages > 1 %}
+    <div class="flex justify-center space-x-2">
+        {% if transactions.has_prev %}
+        <a href="{{ url_for('admin.transactions', page=transactions.prev_num, search=request.args.get('search'), status=request.args.get('status'), min_amount=request.args.get('min_amount'), max_amount=request.args.get('max_amount')) }}"
+            class="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% endif %}
+
+        <span class="px-4 py-2 bg-purple-600 text-white rounded-lg">
+            Page {{ transactions.page }} of {{ transactions.pages }}
+        </span>
+
+        {% if transactions.has_next %}
+        <a href="{{ url_for('admin.transactions', page=transactions.next_num, search=request.args.get('search'), status=request.args.get('status'), min_amount=request.args.get('min_amount'), max_amount=request.args.get('max_amount')) }}"
+            class="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Transaction Details Modal -->
+<div id="transactionDetailsModal"
+    class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+            class="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-4 flex justify-between items-center">
+            <h3 class="text-xl font-bold"><i class="fas fa-receipt mr-2"></i>Transaction Details</h3>
+            <button onclick="closeTransactionDetails()" class="text-white hover:text-gray-200">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <div id="transactionDetailsContent" class="p-6">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Refund Modal -->
+<div id="refundModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <h3 class="text-xl font-bold mb-4 text-red-600"><i class="fas fa-undo mr-2"></i>Refund Transaction</h3>
+        <p class="text-gray-600 mb-4">Refund amount: <strong id="refundAmount"></strong></p>
+        <input type="text" id="refundReason" placeholder="Refund reason (optional)"
+            class="w-full px-4 py-2 border rounded mb-4">
+        <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4 text-sm text-yellow-800">
+            ⚠️ This will mark the transaction as refunded. Money should be returned to customer manually.
+        </div>
+        <div class="flex gap-3">
+            <button onclick="closeRefundModal()"
+                class="flex-1 px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+            <button onclick="confirmRefund()"
+                class="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Refund</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentTransactionId = null;
+
+    // View Transaction Details
+    async function viewTransactionDetails(txnId) {
+        try {
+            const res = await fetch(`/admin/transactions/${txnId}/details`);
+            const data = await res.json();
+
+            if (data.success) {
+                const txn = data.transaction;
+                const project = data.project;
+                const customer = data.customer;
+                const creator = data.creator;
+
+                const html = `
+                <div class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-600 mb-1">Transaction ID</div>
+                            <div class="text-2xl font-bold text-purple-600">#${txn.id}</div>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="text-sm text-gray-600 mb-1">Amount</div>
+                            <div class="text-2xl font-bold text-green-600">₹${txn.amount}</div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5 class="font-semibold mb-2">Project Details</h5>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="font-medium">${project.title}</div>
+                            <div class="text-sm text-gray-600">Budget: ₹${project.budget} • Status: ${project.status}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <h5 class="font-semibold mb-2">Customer</h5>
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <div class="font-medium">${customer.name}</div>
+                                <div class="text-sm text-gray-600">${customer.email}</div>
+                                <div class="text-xs mt-2 ${txn.customer_confirmed ? 'text-green-600' : 'text-gray-500'}">
+                                    ${txn.customer_confirmed ? '✓ Confirmed' : '○ Not Confirmed'}
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold mb-2">Creator</h5>
+                            <div class="bg-green-50 p-3 rounded-lg">
+                                <div class="font-medium">${creator.name}</div>
+                                <div class="text-sm text-gray-600">${creator.email}</div>
+                                <div class="text-xs mt-2 ${txn.creator_confirmed ? 'text-green-600' : 'text-gray-500'}">
+                                    ${txn.creator_confirmed ? '✓ Confirmed' : '○ Not Confirmed'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5 class="font-semibold mb-2">Transaction Timeline</h5>
+                        <div class="space-y-2">
+                            <div class="flex items-center text-sm">
+                                <i class="fas fa-circle text-xs text-blue-500 mr-2"></i>
+                                <span>Created: ${txn.created_at}</span>
+                            </div>
+                            ${txn.payment_confirmed_at !== 'N/A' ? `
+                                <div class="flex items-center text-sm">
+                                    <i class="fas fa-circle text-xs text-green-500 mr-2"></i>
+                                    <span>Payment Confirmed: ${txn.payment_confirmed_at}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="bg-${txn.status === 'completed' ? 'green' : txn.status === 'pending' ? 'yellow' : 'red'}-50 border border-${txn.status === 'completed' ? 'green' : txn.status === 'pending' ? 'yellow' : 'red'}-200 rounded-lg p-4">
+                        <div class="font-semibold uppercase text-${txn.status === 'completed' ? 'green' : txn.status === 'pending' ? 'yellow' : 'red'}-700">
+                            Status: ${txn.status}
+                        </div>
+                    </div>
+                    
+                    ${txn.payment_screenshot ? `
+                        <div>
+                            <h5 class="font-semibold mb-2">Payment Screenshot</h5>
+                            <a href="/static/payment_screenshots/${txn.payment_screenshot}" target="_blank" 
+                               class="text-purple-600 hover:underline">
+                                <i class="fas fa-image mr-2"></i>View Screenshot
+                            </a>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+                document.getElementById('transactionDetailsContent').innerHTML = html;
+                document.getElementById('transactionDetailsModal').classList.remove('hidden');
+            }
+        } catch (error) {
+            alert('Error loading transaction details');
+        }
+    }
+
+    function closeTransactionDetails() {
+        document.getElementById('transactionDetailsModal').classList.add('hidden');
+    }
+
+    // Refund Transaction
+    function refundTransaction(txnId, amount) {
+        currentTransactionId = txnId;
+        document.getElementById('refundAmount').textContent = `₹${amount}`;
+        document.getElementById('refundModal').classList.remove('hidden');
+    }
+
+    function closeRefundModal() {
+        document.getElementById('refundModal').classList.add('hidden');
+        document.getElementById('refundReason').value = '';
+        currentTransactionId = null;
+    }
+
+    async function confirmRefund() {
+        const reason = document.getElementById('refundReason').value;
+
+        const formData = new FormData();
+        formData.append('reason', reason);
+
+        try {
+            const res = await fetch(`/admin/transactions/${currentTransactionId}/refund`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                closeRefundModal();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to refund'));
+            }
+        } catch (error) {
+            alert('Error refunding transaction');
+        }
+    }
+
+    // Release Escrow
+    async function releaseEscrow(txnId, amount, creatorName) {
+        if (!confirm(`Release ₹${amount} to ${creatorName}?\n\nThis will:\n• Mark transaction as completed\n• Release payment to creator\n• Complete the project`)) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/admin/transactions/${txnId}/release`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to release escrow'));
+            }
+        } catch (error) {
+            alert('Error releasing escrow');
+        }
+    }
+</script>
+{% endblock %}
