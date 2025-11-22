@@ -18,7 +18,7 @@
             <div class="text-gray-600">Completed</div>
         </div>
         <div class="bg-white rounded-lg shadow p-6">
-            <div class="text-3xl font-bold text-purple-600">₹{{ "%.2f"|format(total_spent) }}</div>
+            <div class="text-3xl font-bold text-purple-600">&#8377;{{ "%.2f"|format(total_spent) }}</div>
             <div class="text-gray-600">Total Spent</div>
         </div>
     </div>
@@ -32,7 +32,7 @@
                     <div class="text-sm font-medium text-orange-600 uppercase mb-1">
                         <i class="fas fa-clock mr-1"></i> Pending Payment
                     </div>
-                    <div class="text-3xl font-bold text-orange-700">₹{{ "%.2f"|format(pending_payment) }}</div>
+                    <div class="text-3xl font-bold text-orange-700">&#8377;{{ "%.2f"|format(pending_payment) }}</div>
                     <div class="text-sm text-orange-600 mt-1">Money in escrow</div>
                 </div>
                 <div class="text-orange-400">
@@ -46,7 +46,7 @@
                     <div class="text-sm font-medium text-green-600 uppercase mb-1">
                         <i class="fas fa-wallet mr-1"></i> Available Balance
                     </div>
-                    <div class="text-3xl font-bold text-green-700">₹0.00</div>
+                    <div class="text-3xl font-bold text-green-700">&#8377;0.00</div>
                     <div class="text-sm text-green-600 mt-1">Add funds to get started</div>
                 </div>
                 <div class="text-green-400">
@@ -71,7 +71,7 @@
                             class="inline-block bg-{{ 'green' if project.status == 'completed' else 'blue' }}-100 text-{{ 'green' if project.status == 'completed' else 'blue' }}-800 px-3 py-1 rounded-full text-sm">
                             {{ project.status|title }}
                         </span>
-                        <div class="font-bold mt-2">₹{{ project.budget }}</div>
+                        <div class="font-bold mt-2">&#8377;{{ project.budget }}</div>
                     </div>
                 </div>
 
