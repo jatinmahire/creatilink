@@ -48,6 +48,7 @@ def create_app(config_name='default'):
     from app.dashboard import dashboard_bp
     from app.admin import admin_bp
     from app.payment_history import payment_history_bp
+    from app.disputes import disputes_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -57,6 +58,7 @@ def create_app(config_name='default'):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(payment_history_bp)
+    app.register_blueprint(disputes_bp)
     
     # Register SocketIO events
     from app import socket_events

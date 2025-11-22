@@ -269,3 +269,33 @@ class Notification(db.Model):
     
     def __repr__(self):
         return f'<Notification {self.id}: {self.type}>'
+
+
+class Dispute(db.Model):
+    """Dispute model for payment disputes"""
+    __tablename__ = 'disputes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    transaction_id = db.Column(db.Integer, db.ForeignKey('transactions.id'), nullable=False)
+    raised_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Dispute details
+    dispute_type = db.Column(db.String(50), nullable=False)  # 'payment_not_received', 'wrong_amount', 'quality_issue'
+    description = db.Column(db.Text, nullable=False)
+    evidence_files = db.Column(db.Text)  # JSON array of file paths
+    
+    # Status tracking
+    status = db.Column(db.String(20), default='open')  # 'open', 'investigating', 'resolved', 'closed'
+    resolution_notes = db.Column(db.Text)
+    resolved_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    transaction = db.relationship('Transaction', backref='disputes')
+    raised_by = db.relationship('User', foreign_keys=[raised_by_id], backref='raised_disputes')
+    resolved_by = db.relationship('User', foreign_keys=[resolved_by_id], backref='resolved_disputes')
+    
+    def __repr__(self):
+        return f'<Dispute {self.id}: {self.dispute_type}>'
