@@ -16,8 +16,15 @@ def customer_dashboard():
     
     from app import db
     
-    # Posted projects
+    # Posted projects with transactions
     projects = Project.query.filter_by(posted_by_id=current_user.id).order_by(Project.created_at.desc()).all()
+    
+    # Get transactions for each project
+    project_transactions = {}
+    for project in projects:
+        trans = Transaction.query.filter_by(project_id=project.id).first()
+        if trans:
+            project_transactions[project.id] = trans
     
     # Statistics
     total_projects = len(projects)
@@ -42,6 +49,7 @@ def customer_dashboard():
     return render_template(
         'dashboard/customer.html',
         projects=projects,
+        project_transactions=project_transactions,
         total_projects=total_projects,
         active_projects=active_projects,
         completed_projects=completed_projects,
