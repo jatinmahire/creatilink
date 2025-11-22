@@ -193,7 +193,45 @@
                     const list = document.getElementById('notificationList');
                     if (data.length === 0) {
                         list.innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">No notifications</p>';
-                    } else {
+                    }
+
+        // Profile Dropdown with hover + click behavior
+        const profileDropdown = document.getElementById('profileDropdown');
+        const profileButton = document.getElementById('profileButton');
+        const profileMenu = document.getElementById('profileMenu');
+        
+        if (profileButton && profileMenu) {
+            let isOpen = false;
+            
+            // Open on click
+            profileButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isOpen = !isOpen;
+                profileMenu.classList.toggle('hidden', !isOpen);
+            });
+            
+            // Keep open when hovering over dropdown or button
+            profileDropdown.addEventListener('mouseenter', () => {
+                profileMenu.classList.remove('hidden');
+                isOpen = true;
+            });
+            
+            // Close when mouse leaves the entire dropdown area
+            profileDropdown.addEventListener('mouseleave', () => {
+                if (!isOpen) {
+                    profileMenu.classList.add('hidden');
+                }
+            });
+            
+            // Close when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!profileDropdown.contains(e.target)) {
+                    profileMenu.classList.add('hidden');
+                    isOpen = false;
+                }
+            });
+        }
+ else {
                         list.innerHTML = data.map(n => `<a href="${n.link || '#'}" class="block px-4 py-3 hover:bg-gray-50 border-b ${!n.is_read ? 'bg-blue-50' : ''}"><div class="font-semibold text-sm">${n.title}</div><div class="text-xs text-gray-600">${n.message}</div></a>`).join('');
                     }
                 }
