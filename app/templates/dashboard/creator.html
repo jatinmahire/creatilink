@@ -77,189 +77,209 @@
                         class="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700">
                         <i class="fas fa-eye mr-1"></i> View
                     </a>
-                    <a href="{{ url_for('chat.room', project_id=job.id) }}"
-                        class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
-                        <i class="fas fa-comments mr-1"></i> Chat
-                    </a>
-
-                    {% if job.status == 'assigned' %}
-                    <button onclick="openDeliveryModal({{ job.id }}, '{{ job.title }}')"
-                        class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                        <i class="fas fa-cloud-upload-alt mr-1"></i> Submit Delivery
-                    </button>
-                    {% elif job.status == 'delivered' %}
-                    <div class="bg-yellow-50 text-yellow-800 px-3 py-1 rounded text-sm">
-                        <i class="fas fa-check-circle mr-1"></i> Delivered - Awaiting approval
+                    {% set transaction = job_transactions.get(job.id) %}
+                    {% if transaction %}
+                    <div class="mt-3 border-t pt-3">
+                        <div class="text-xs font-semibold text-gray-600 mb-2">💰 Payment Status</div>
+                        {% if transaction.customer_confirmed and not transaction.creator_confirmed %}
+                        <div class="bg-yellow-50 border border-yellow-200 rounded p-2">
+                            <div class="text-yellow-700 text-sm font-semibold mb-1">🟡 Customer Paid ₹{{
+                                transaction.amount
+                                }}</div>
+                            <p class="text-xs text-yellow-600 mb-2">Check your UPI app</p>
+                            <div class="flex gap-2">
+                                <button onclick="confirmReceipt({{ transaction.id }})"
+                                    class="flex-1 bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 text-xs">✓
+                                    Received</button>
+                                <button onclick="rejectPayment({{ transaction.id }})"
+                                    class="flex-1 bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 text-xs">✗
+                                    Not
+                                    Received</button>
+                            </div>
+                        </div>
+                        {% elif transaction.creator_confirmed %}
+                        <div class="bg-green-50 border border-green-200 rounded p-2">
+                            <div class="text-green-700 text-sm font-semibold">✅ Received: ₹{{ transaction.amount }}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="bg-gray-50 border border-gray-200 rounded p-2">
+                            <div class="text-gray-700 text-sm">⚪ Awaiting Payment (₹{{ transaction.amount }})</div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endif %}
+                    {% endif %}
                 </div>
+                {% else %}
+                <p class="text-gray-500 text-center py-8">No active jobs</p>
+                {% endfor %}
             </div>
-            {% else %}
-            <p class="text-gray-500 text-center py-8">No active jobs</p>
-            {% endfor %}
-        </div>
 
-        <div class="bg-white rounded-xl shadow-lg p-8">
-            <h2 class="text-2xl font-bold mb-6">Recent Applications</h2>
-            {% for app in applications %}
-            <div class="border-b py-4">
-                <h3 class="font-bold">{{ app.project.title }}</h3>
-                <div class="flex justify-between text-sm mt-2">
-                    <span class="text-gray-600">Quote: Γé╣{{ app.quote }}</span>
-                    <span
-                        class="bg-{{ 'green' if app.status == 'accepted' else 'yellow' if app.status == 'pending' else 'red' }}-100 text-{{ 'green' if app.status == 'accepted' else 'yellow' if app.status == 'pending' else 'red' }}-800 px-2 py-1 rounded text-xs">
-                        {{ app.status|title }}
-                    </span>
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <h2 class="text-2xl font-bold mb-6">Recent Applications</h2>
+                {% for app in applications %}
+                <div class="border-b py-4">
+                    <h3 class="font-bold">{{ app.project.title }}</h3>
+                    <div class="flex justify-between text-sm mt-2">
+                        <span class="text-gray-600">Quote: Γé╣{{ app.quote }}</span>
+                        <span
+                            class="bg-{{ 'green' if app.status == 'accepted' else 'yellow' if app.status == 'pending' else 'red' }}-100 text-{{ 'green' if app.status == 'accepted' else 'yellow' if app.status == 'pending' else 'red' }}-800 px-2 py-1 rounded text-xs">
+                            {{ app.status|title }}
+                        </span>
+                    </div>
                 </div>
+                {% else %}
+                <p class="text-gray-500 text-center py-8">No applications yet</p>
+                {% endfor %}
             </div>
-            {% else %}
-            <p class="text-gray-500 text-center py-8">No applications yet</p>
-            {% endfor %}
         </div>
     </div>
-</div>
 
-<!-- Delivery Modal -->
-<div id="deliveryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-8">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-2xl font-bold">Submit Project Delivery</h3>
-            <button onclick="closeDeliveryModal()" class="text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-2xl"></i>
-            </button>
+    <!-- Delivery Modal -->
+    <div id="deliveryModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold">Submit Project Delivery</h3>
+                <button onclick="closeDeliveryModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+
+            <div id="modalProjectTitle" class="mb-6 text-gray-600"></div>
+
+            <form id="deliveryForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-2">
+                        Delivery Link <span class="text-red-500">*</span>
+                    </label>
+                    <input type="url" id="deliveryLink" required
+                        placeholder="https://drive.google.com/... or Dropbox/OneDrive link"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Upload your files to Google Drive, Dropbox, or OneDrive, then paste the sharing link here
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold mb-2">
+                        Delivery Note (Optional)
+                    </label>
+                    <textarea id="deliveryNote" rows="4"
+                        placeholder="Add a message for the customer about the delivery..."
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p class="text-sm text-blue-800">
+                        <i class="fas fa-lightbulb mr-2"></i>
+                        <strong>Tips for successful delivery:</strong>
+                    </p>
+                    <ul class="text-sm text-blue-700 mt-2 ml-6 list-disc space-y-1">
+                        <li>Ensure sharing permissions are set to "Anyone with the link can view"</li>
+                        <li>Organize files in clearly labeled folders</li>
+                        <li>Include source files if applicable</li>
+                        <li>Test the link before submitting</li>
+                    </ul>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeDeliveryModal()"
+                        class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        Submit Delivery
+                    </button>
+                </div>
+            </form>
         </div>
-
-        <div id="modalProjectTitle" class="mb-6 text-gray-600"></div>
-
-        <form id="deliveryForm" class="space-y-4">
-            <div>
-                <label class="block text-sm font-semibold mb-2">
-                    Delivery Link <span class="text-red-500">*</span>
-                </label>
-                <input type="url" id="deliveryLink" required
-                    placeholder="https://drive.google.com/... or Dropbox/OneDrive link"
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <p class="text-xs text-gray-500 mt-1">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    Upload your files to Google Drive, Dropbox, or OneDrive, then paste the sharing link here
-                </p>
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold mb-2">
-                    Delivery Note (Optional)
-                </label>
-                <textarea id="deliveryNote" rows="4" placeholder="Add a message for the customer about the delivery..."
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"></textarea>
-            </div>
-
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p class="text-sm text-blue-800">
-                    <i class="fas fa-lightbulb mr-2"></i>
-                    <strong>Tips for successful delivery:</strong>
-                </p>
-                <ul class="text-sm text-blue-700 mt-2 ml-6 list-disc space-y-1">
-                    <li>Ensure sharing permissions are set to "Anyone with the link can view"</li>
-                    <li>Organize files in clearly labeled folders</li>
-                    <li>Include source files if applicable</li>
-                    <li>Test the link before submitting</li>
-                </ul>
-            </div>
-
-            <div class="flex justify-end space-x-3 pt-4">
-                <button type="button" onclick="closeDeliveryModal()"
-                    class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                    Cancel
-                </button>
-                <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                    <i class="fas fa-paper-plane mr-2"></i>
-                    Submit Delivery
-                </button>
-            </div>
-        </form>
     </div>
-</div>
 
-<script>
-    let currentProjectId = null;
+    <script>
+        let currentProjectId = null;
 
-    function openDeliveryModal(projectId, projectTitle) {
-        currentProjectId = projectId;
-        document.getElementById('modalProjectTitle').innerHTML = `<strong>Project:</strong> ${projectTitle}`;
-        document.getElementById('deliveryModal').classList.remove('hidden');
-        document.getElementById('deliveryLink').value = '';
-        document.getElementById('deliveryNote').value = '';
-    }
-
-    function closeDeliveryModal() {
-        document.getElementById('deliveryModal').classList.add('hidden');
-        currentProjectId = null;
-    }
-
-    document.getElementById('deliveryForm').addEventListener('submit', function (e) {
-        e.preventDefault();
-
-        const link = document.getElementById('deliveryLink').value.trim();
-        const note = document.getElementById('deliveryNote').value.trim();
-
-        if (!link) {
-            alert('Please provide a delivery link');
-            return;
+        function openDeliveryModal(projectId, projectTitle) {
+            currentProjectId = projectId;
+            document.getElementById('modalProjectTitle').innerHTML = `<strong>Project:</strong> ${projectTitle}`;
+            document.getElementById('deliveryModal').classList.remove('hidden');
+            document.getElementById('deliveryLink').value = '';
+            document.getElementById('deliveryNote').value = '';
         }
 
-        // Validate link domain
-        const allowedDomains = ['drive.google.com', 'dropbox.com', 'onedrive.live.com', '1drv.ms'];
-        const isValidDomain = allowedDomains.some(domain => link.toLowerCase().includes(domain));
-
-        if (!isValidDomain) {
-            alert('Please use Google Drive, Dropbox, or OneDrive links only');
-            return;
+        function closeDeliveryModal() {
+            document.getElementById('deliveryModal').classList.add('hidden');
+            currentProjectId = null;
         }
 
-        // Submit delivery
-        fetch(`/projects/${currentProjectId}/submit_delivery`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                delivery_link: link,
-                delivery_note: note
+        document.getElementById('deliveryForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const link = document.getElementById('deliveryLink').value.trim();
+            const note = document.getElementById('deliveryNote').value.trim();
+
+            if (!link) {
+                alert('Please provide a delivery link');
+                return;
+            }
+
+            // Validate link domain
+            const allowedDomains = ['drive.google.com', 'dropbox.com', 'onedrive.live.com', '1drv.ms'];
+            const isValidDomain = allowedDomains.some(domain => link.toLowerCase().includes(domain));
+
+            if (!isValidDomain) {
+                alert('Please use Google Drive, Dropbox, or OneDrive links only');
+                return;
+            }
+
+            // Submit delivery
+            fetch(`/projects/${currentProjectId}/submit_delivery`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    delivery_link: link,
+                    delivery_note: note
+                })
             })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    closeDeliveryModal();
-                    window.location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while submitting delivery');
-            });
-    });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        closeDeliveryModal();
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while submitting delivery');
+                });
+        });
 
-    // Close modal on background click
-    document.getElementById('deliveryModal').addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeDeliveryModal();
+        // Close modal on background click
+        document.getElementById('deliveryModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeDeliveryModal();
+            }
+        });
+
+        async function confirmReceipt(id) {
+            if (!confirm('Received payment in UPI app?')) return;
+            const res = await fetch(`/payment/creator_confirm/${id}`, { method: 'POST' });
+            if (res.ok) { alert('Γ£à Payment confirmed!'); location.reload(); }
         }
-    });
 
-    async function confirmReceipt(id) {
-        if (!confirm('Received payment in UPI app?')) return;
-        const res = await fetch(`/payment/creator_confirm/${id}`, { method: 'POST' });
-        if (res.ok) { alert('Γ£à Payment confirmed!'); location.reload(); }
-    }
+        async function rejectPayment(id) {
+            if (!confirm('Mark as NOT received?')) return;
+            const res = await fetch(`/payment/creator_reject/${id}`, { method: 'POST' });
+            if (res.ok) { alert('Γ¥î Customer notified'); location.reload(); }
+        }
+    </script>
 
-    async function rejectPayment(id) {
-        if (!confirm('Mark as NOT received?')) return;
-        const res = await fetch(`/payment/creator_reject/${id}`, { method: 'POST' });
-        if (res.ok) { alert('Γ¥î Customer notified'); location.reload(); }
-    }
-</script>
-
-{% endblock %}
+    {% endblock %}
