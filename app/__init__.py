@@ -98,8 +98,40 @@ def create_app(config_name='default'):
                 );
             """))
             
+            # PHASE 1: Project Management (Delete & Leave)
+            db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS deleted_by_id INTEGER REFERENCES users(id);"))
+            db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;"))
+            db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS deletion_reason VARCHAR(200);"))
+            db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS creator_left BOOLEAN DEFAULT FALSE;"))
+            db.session.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS creator_left_at TIMESTAMP;"))
+            
+            # PHASE 2: Payment Screenshot Upload
+            db.session.execute(text("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS screenshot_uploaded_at TIMESTAMP;"))
+            
+            # PHASE 4: Dispute Resolution
+            db.session.execute(text("""
+                CREATE TABLE IF NOT EXISTS disputes (
+                    id SERIAL PRIMARY KEY,
+                    transaction_id INTEGER REFERENCES transactions(id) NOT NULL,
+                    raised_by_id INTEGER REFERENCES users(id) NOT NULL,
+                    dispute_type VARCHAR(50) NOT NULL,
+                    description TEXT NOT NULL,
+                    evidence_files TEXT,
+                    status VARCHAR(20) DEFAULT 'open',
+                    resolution_notes TEXT,
+                    resolved_by_id INTEGER REFERENCES users(id),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    resolved_at TIMESTAMP
+                );
+            """))
+            
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_disputes_transaction ON disputes(transaction_id);"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_disputes_raised_by ON disputes(raised_by_id);"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);"))
+            
             db.session.commit()
             print("✅ Payment system migration successful!")
+            print("✅ Phase 1-4 migrations successful!")
         except Exception as e:
             print(f"⚠️ Migration error: {e}")
             db.session.rollback()
