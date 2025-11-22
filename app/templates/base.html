@@ -61,6 +61,23 @@
                     </a>
                     {% endif %}
 
+                    <!-- Notifications Dropdown -->
+                    <div class="relative" id="notificationDropdown">
+                        <button id="notificationButton"
+                            class="relative text-gray-700 hover:text-indigo-600 transition p-2">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span id="notifBadge"
+                                class="hidden absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                        </button>
+                        <div id="notificationMenu"
+                            class="hidden absolute right-0 mt-2 w-80 bg-white shadow-xl rounded-lg overflow-hidden z-50">
+                            <div class="bg-indigo-600 text-white px-4 py-3 font-semibold">Notifications</div>
+                            <div id="notificationList" class="max-h-96 overflow-y-auto">
+                                <p class="text-gray-500 text-center py-8 text-sm">No new notifications</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="relative" id="profileDropdown">
                         <button id="profileButton"
                             class="flex items-center space-x-2 text-gray-700 hover:text-indigo-600 transition">
