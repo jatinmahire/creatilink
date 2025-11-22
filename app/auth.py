@@ -176,6 +176,9 @@ def profile():
             current_user.bio = request.form.get('bio', current_user.bio)
             current_user.skills = request.form.get('skills', current_user.skills)
             current_user.domain = request.form.get('domain', current_user.domain)
+            upi_id = request.form.get('upi_id', '').strip()
+            if upi_id:
+                current_user.upi_id = upi_id
         
         # Handle profile image
         if 'profile_image' in request.files:

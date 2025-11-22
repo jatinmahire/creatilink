@@ -248,6 +248,18 @@
             closeDeliveryModal();
         }
     });
+
+    async function confirmReceipt(id) {
+        if (!confirm('Received payment in UPI app?')) return;
+        const res = await fetch(`/payment/creator_confirm/${id}`, { method: 'POST' });
+        if (res.ok) { alert('✅ Payment confirmed!'); location.reload(); }
+    }
+
+    async function rejectPayment(id) {
+        if (!confirm('Mark as NOT received?')) return;
+        const res = await fetch(`/payment/creator_reject/${id}`, { method: 'POST' });
+        if (res.ok) { alert('❌ Customer notified'); location.reload(); }
+    }
 </script>
 
 {% endblock %}
