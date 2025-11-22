@@ -9,6 +9,10 @@
             User Management
         </h2>
         <div class="flex items-center space-x-3">
+            <a href="{{ url_for('admin.export_users') }}"
+                class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                <i class="fas fa-download mr-2"></i>Export CSV
+            </a>
             <span class="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-semibold">
                 Total: {{ users.total }} users
             </span>
@@ -98,16 +102,48 @@
                         <td class="px-6 py-4 text-sm text-gray-600">
                             {{ user.created_at.strftime('%Y-%m-%d') }}
                         </td>
-                        <td class="px-6 py-4 text-center">
-                            {% if not user.is_admin or user.id != current_user.id %}
-                            <button onclick="toggleUserStatus({{ user.id }})"
-                                class="text-{{ 'red' if user.is_active else 'green' }}-600 hover:text-{{ 'red' if user.is_active else 'green' }}-800 mx-2"
-                                title="{{ 'Ban User' if user.is_active else 'Activate User' }}">
-                                <i class="fas fa-{{ 'ban' if user.is_active else 'check-circle' }}"></i>
-                            </button>
-                            {% else %}
-                            <span class="text-gray-400 text-xs">You</span>
-                            {% endif %}
+                        <td class="px-6 py-4">
+                            <div class="flex justify-center space-x-2">
+                                <!-- View Details -->
+                                <button onclick="viewUserDetails({{ user.id }})"
+                                    class="text-blue-600 hover:text-blue-800" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+
+                                {% if not user.is_admin or user.id != current_user.id %}
+                                <!-- Ban/Unban -->
+                                <button
+                                    onclick="{% if user.is_active %}banUser({{ user.id }}, '{{ user.full_name }}'){% else %}unbanUser({{ user.id }}){% endif %}"
+                                    class="text-{{ 'red' if user.is_active else 'green' }}-600 hover:text-{{ 'red' if user.is_active else 'green' }}-800"
+                                    title="{{ 'Ban User' if user.is_active else 'Unban User' }}">
+                                    <i class="fas fa-{{ 'ban' if user.is_active else 'check-circle' }}"></i>
+                                </button>
+
+                                <!-- Delete -->
+                                <button onclick="deleteUser({{ user.id }}, '{{ user.full_name }}')"
+                                    class="text-red-600 hover:text-red-800" title="Delete User">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+
+                                {% if user.role == 'creator' %}
+                                <!-- Verify Creator -->
+                                <button onclick="verifyCreator({{ user.id }}, '{{ user.full_name }}')"
+                                    class="text-purple-600 hover:text-purple-800" title="Verify Creator">
+                                    <i class="fas fa-certificate"></i>
+                                </button>
+                                {% endif %}
+
+                                {% if not user.is_admin %}
+                                <!-- Promote to Admin -->
+                                <button onclick="promoteToAdmin({{ user.id }}, '{{ user.full_name }}')"
+                                    class="text-orange-600 hover:text-orange-800" title="Promote to Admin">
+                                    <i class="fas fa-shield-alt"></i>
+                                </button>
+                                {% endif %}
+                                {% else %}
+                                <span class="text-gray-400 text-xs">You</span>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% else %}
@@ -147,29 +183,245 @@
     {% endif %}
 </div>
 
-<script>
-    function toggleUserStatus(userId) {
-        if (!confirm('Are you sure you want to change this user\'s status?')) {
-            return;
-        }
+<!-- User Details Modal -->
+<div id="userDetailsModal"
+    class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+            class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex justify-between items-center">
+            <h3 class="text-xl font-bold"><i class="fas fa-user-circle mr-2"></i>User Details</h3>
+            <button onclick="closeUserDetails()" class="text-white hover:text-gray-200">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
 
-        fetch(`/admin/users/${userId}/toggle-status`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
+        <div id="userDetailsContent" class="p-6">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Ban User Modal -->
+<div id="banModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <h3 class="text-xl font-bold mb-4 text-red-600"><i class="fas fa-ban mr-2"></i>Ban User</h3>
+        <p class="text-gray-600 mb-4">Are you sure you want to ban <strong id="banUserName"></strong>?</p>
+        <input type="text" id="banReason" placeholder="Reason for ban (optional)"
+            class="w-full px-4 py-2 border rounded mb-4">
+        <div class="flex gap-3">
+            <button onclick="closeBanModal()" class="flex-1 px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+            <button onclick="confirmBan()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Ban
+                User</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUserId = null;
+
+    // View User Details
+    async function viewUserDetails(userId) {
+        try {
+            const res = await fetch(`/admin/users/${userId}/details`);
+            const data = await res.json();
+
+            if (data.success) {
+                const user = data.user;
+                const stats = data.stats;
+
+                const html = `
+                <div class="flex items-center space-x-4 mb-6">
+                    <img src="${user.profile_image}" class="w-24 h-24 rounded-full object-cover">
+                    <div>
+                        <h4 class="text-2xl font-bold">${user.full_name}</h4>
+                        <p class="text-gray-600">${user.email}</p>
+                        <div class="flex gap-2 mt-2">
+                            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">${user.role}</span>
+                            <span class="px-2 py-1 bg-${user.is_active ? 'green' : 'red'}-100 text-${user.is_active ? 'green' : 'red'}-700 rounded text-xs">
+                                ${user.is_active ? 'Active' : 'Banned'}
+                            </span>
+                            ${user.is_admin ? '<span class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">Admin</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-blue-600">${stats.total_projects}</div>
+                        <div class="text-sm text-gray-600">Projects</div>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-purple-600">₹${stats.total_spent}</div>
+                        <div class="text-sm text-gray-600">Total Spent</div>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-yellow-600">${stats.avg_rating} ⭐</div>
+                        <div class="text-sm text-gray-600">${stats.total_reviews} Reviews</div>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <h5 class="font-semibold mb-2">Bio</h5>
+                        <p class="text-gray-600">${user.bio}</p>
+                    </div>
+                    
+                    <div>
+                        <h5 class="font-semibold mb-2">Skills</h5>
+                        <p class="text-gray-600">${user.skills}</p>
+                    </div>
+                    
+                    ${user.portfolio_url !== 'N/A' ? `
+                        <div>
+                            <h5 class="font-semibold mb-2">Portfolio</h5>
+                            <a href="${user.portfolio_url}" target="_blank" class="text-blue-600 hover:underline">
+                                ${user.portfolio_url}
+                            </a>
+                        </div>
+                    ` : ''}
+                    
+                    <div>
+                        <h5 class="font-semibold mb-2">Member Since</h5>
+                        <p class="text-gray-600">${user.created_at}</p>
+                    </div>
+                    
+                    ${data.projects.length > 0 ? `
+                        <div>
+                            <h5 class="font-semibold mb-2">Recent Projects</h5>
+                            <div class="space-y-2">
+                                ${data.projects.map(p => `
+                                    <div class="p-3 bg-gray-50 rounded">
+                                        <div class="font-medium">${p.title}</div>
+                                        <div class="text-sm text-gray-600">₹${p.budget} • ${p.status}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+                document.getElementById('userDetailsContent').innerHTML = html;
+                document.getElementById('userDetailsModal').classList.remove('hidden');
             }
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Failed to update user status'));
-                }
-            })
-            .catch(error => {
-                alert('Error: ' + error.message);
+        } catch (error) {
+            alert('Error loading user details');
+        }
+    }
+
+    function closeUserDetails() {
+        document.getElementById('userDetailsModal').classList.add('hidden');
+    }
+
+    // Ban User
+    function banUser(userId, userName) {
+        currentUserId = userId;
+        document.getElementById('banUserName').textContent = userName;
+        document.getElementById('banModal').classList.remove('hidden');
+    }
+
+    function closeBanModal() {
+        document.getElementById('banModal').classList.add('hidden');
+        document.getElementById('banReason').value = '';
+        currentUserId = null;
+    }
+
+    async function confirmBan() {
+        const reason = document.getElementById('banReason').value;
+
+        const formData = new FormData();
+        formData.append('reason', reason);
+
+        try {
+            const res = await fetch(`/admin/users/${currentUserId}/ban`, {
+                method: 'POST',
+                body: formData
             });
+            const data = await res.json();
+
+            if (data.success) {
+                closeBanModal();
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to ban user'));
+            }
+        } catch (error) {
+            alert('Error banning user');
+        }
+    }
+
+    // Unban User
+    async function unbanUser(userId) {
+        if (!confirm('Unban this user?')) return;
+
+        try {
+            const res = await fetch(`/admin/users/${userId}/toggle-status`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to unban user'));
+            }
+        } catch (error) {
+            alert('Error unban user');
+        }
+    }
+
+    // Delete User
+    async function deleteUser(userId, userName) {
+        if (!confirm(`Delete user "${userName}"? This will deactivate their account.`)) return;
+
+        try {
+            const res = await fetch(`/admin/users/${userId}/delete`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to delete user'));
+            }
+        } catch (error) {
+            alert('Error deleting user');
+        }
+    }
+
+    // Verify Creator
+    async function verifyCreator(userId, userName) {
+        if (!confirm(`Toggle verification for creator "${userName}"?`)) return;
+
+        try {
+            const res = await fetch(`/admin/users/${userId}/verify`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to verify creator'));
+            }
+        } catch (error) {
+            alert('Error verifying creator');
+        }
+    }
+
+    // Promote to Admin
+    async function promoteToAdmin(userId, userName) {
+        if (!confirm(`Promote "${userName}" to admin? This gives them full admin access!`)) return;
+
+        try {
+            const res = await fetch(`/admin/users/${userId}/promote`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to promote user'));
+            }
+        } catch (error) {
+            alert('Error promoting user');
+        }
     }
 </script>
 {% endblock %}
