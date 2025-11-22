@@ -1,51 +1,175 @@
-{% extends "base.html" %}
-{% block title %}User Management - Admin{% endblock %}
+{% extends "admin/base.html" %}
+{% block title %}User Management{% endblock %}
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-12">
-    <h1 class="text-3xl font-bold mb-8">User Management</h1>
-    
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-        <table class="w-full">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y">
-                {% for user in users.items %}
-                <tr>
-                    <td class="px-6 py-4">{{ user.full_name }}</td>
-                    <td class="px-6 py-4">{{ user.email }}</td>
-                    <td class="px-6 py-4">{{ user.role|title }}</td>
-                    <td class="px-6 py-4">
-                        <span class="px-3 py-1 rounded-full text-xs bg-{{ 'green' if user.is_active else 'red' }}-100 text-{{ 'green' if user.is_active else 'red' }}-800">
-                            {{ 'Active' if user.is_active else 'Inactive' }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4">
-                        {% if not user.is_admin %}
-                        <button onclick="toggleUserStatus({{ user.id }})" 
-                                class="text-orange-600 hover:text-orange-800 text-sm">
-                            {{ 'Deactivate' if user.is_active else 'Activate' }}
-                        </button>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-users text-blue-600 mr-2"></i>
+            User Management
+        </h2>
+        <div class="flex items-center space-x-3">
+            <span class="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-semibold">
+                Total: {{ users.total }} users
+            </span>
+        </div>
     </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <form method="GET" class="flex flex-wrap gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-semibold mb-2">Search</label>
+                <input type="text" name="search" value="{{ request.args.get('search', '') }}"
+                    placeholder="Name or email..."
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="min-w-[150px]">
+                <label class="block text-sm font-semibold mb-2">Role</label>
+                <select name="role" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Roles</option>
+                    <option value="customer" {% if request.args.get('role')=='customer' %}selected{% endif %}>Customer
+                    </option>
+                    <option value="creator" {% if request.args.get('role')=='creator' %}selected{% endif %}>Creator
+                    </option>
+                    <option value="admin" {% if request.args.get('role')=='admin' %}selected{% endif %}>Admin</option>
+                </select>
+            </div>
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-search mr-2"></i>Filter
+                </button>
+                <a href="{{ url_for('admin.users') }}"
+                    class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300">
+                    <i class="fas fa-times mr-2"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">ID</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">User</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Role</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Joined</th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for user in users.items %}
+                    <tr class="hover:bg-gray-50" id="user-{{ user.id }}">
+                        <td class="px-6 py-4 text-sm text-gray-600">#{{ user.id }}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center space-x-3">
+                                <img src="{{ user.profile_image or '/static/images/default-avatar.png' }}"
+                                    alt="{{ user.full_name }}" class="w-10 h-10 rounded-full object-cover">
+                                <div>
+                                    <div class="font-semibold text-gray-900">{{ user.full_name }}</div>
+                                    <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+                                         bg-{{ 'orange' if user.is_admin else 'blue' if user.role == 'customer' else 'green' }}-100 
+                                         text-{{ 'orange' if user.is_admin else 'blue' if user.role == 'customer' else 'green' }}-700">
+                                {% if user.is_admin %}
+                                <i class="fas fa-shield-alt mr-1"></i>Admin
+                                {% else %}
+                                {{ user.role|title }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+                                         bg-{{ 'green' if user.is_active else 'red' }}-100 
+                                         text-{{ 'green' if user.is_active else 'red' }}-700">
+                                <i class="fas fa-circle text-xs mr-1"></i>
+                                {{ 'Active' if user.is_active else 'Banned' }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {{ user.created_at.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            {% if not user.is_admin or user.id != current_user.id %}
+                            <button onclick="toggleUserStatus({{ user.id }})"
+                                class="text-{{ 'red' if user.is_active else 'green' }}-600 hover:text-{{ 'red' if user.is_active else 'green' }}-800 mx-2"
+                                title="{{ 'Ban User' if user.is_active else 'Activate User' }}">
+                                <i class="fas fa-{{ 'ban' if user.is_active else 'check-circle' }}"></i>
+                            </button>
+                            {% else %}
+                            <span class="text-gray-400 text-xs">You</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-users text-4xl mb-4 opacity-50"></i>
+                            <p>No users found</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if users.pages > 1 %}
+    <div class="flex justify-center space-x-2">
+        {% if users.has_prev %}
+        <a href="{{ url_for('admin.users', page=users.prev_num, search=request.args.get('search'), role=request.args.get('role')) }}"
+            class="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        {% endif %}
+
+        <span class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+            Page {{ users.page }} of {{ users.pages }}
+        </span>
+
+        {% if users.has_next %}
+        <a href="{{ url_for('admin.users', page=users.next_num, search=request.args.get('search'), role=request.args.get('role')) }}"
+            class="px-4 py-2 bg-white border rounded-lg hover:bg-gray-50">
+            <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
+
 <script>
-function toggleUserStatus(userId) {
-    if (confirm('Are you sure?')) {
-        fetch(`/admin/users/${userId}/toggle-status`, { method: 'POST' })
-            .then(() => window.location.reload());
+    function toggleUserStatus(userId) {
+        if (!confirm('Are you sure you want to change this user\'s status?')) {
+            return;
+        }
+
+        fetch(`/admin/users/${userId}/toggle-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to update user status'));
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error.message);
+            });
     }
-}
 </script>
 {% endblock %}

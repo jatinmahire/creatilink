@@ -1,58 +1,237 @@
-{% extends "base.html" %}
-{% block title %}Admin Dashboard - CreatiLink{% endblock %}
+{% extends "admin/base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 py-12">
-    <h1 class="text-3xl font-bold mb-8 text-orange-600"><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
-    
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="text-3xl font-bold text-blue-600">{{ total_users }}</div>
-            <div class="text-gray-600">Total Users</div>
-            <div class="text-sm text-gray-500 mt-2">{{ total_customers }} customers, {{ total_creators }} creators</div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="text-3xl font-bold text-green-600">{{ total_projects }}</div>
-            <div class="text-gray-600">Total Projects</div>
-            <div class="text-sm text-gray-500 mt-2">{{ active_projects }} active</div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="text-3xl font-bold text-purple-600">{{ total_transactions }}</div>
-            <div class="text-gray-600">Transactions</div>
-        </div>
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="text-3xl font-bold text-indigo-600">₹{{ "%.2f"|format(platform_fee) }}</div>
-            <div class="text-gray-600">Platform Revenue</div>
-            <div class="text-sm text-gray-500 mt-2">10% of ₹{{ "%.2f"|format(total_revenue) }}</div>
+<div class="space-y-8">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-chart-line text-orange-600 mr-2"></i>
+            Dashboard Overview
+        </h2>
+        <div class="text-sm text-gray-500">
+            <i class="fas fa-clock mr-2"></i>Last updated: Just now
         </div>
     </div>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <h2 class="text-xl font-bold mb-4">Recent Users</h2>
-            <div class="space-y-3">
-                {% for user in recent_users %}
-                <div class="flex justify-between items-center border-b pb-2">
-                    <div>
-                        <div class="font-semibold">{{ user.full_name }}</div>
-                        <div class="text-sm text-gray-500">{{ user.email }} - {{ user.role|title }}</div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Users Card -->
+        <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm opacity-90 mb-1">Total Users</div>
+                    <div class="text-4xl font-bold">{{ total_users }}</div>
+                    <div class="text-xs mt-2 opacity-75">
+                        {{ total_customers }} customers • {{ total_creators }} creators
                     </div>
-                    <a href="{{ url_for('admin.users') }}" class="text-indigo-600 hover:text-indigo-800 text-sm">
-                        Manage
-                    </a>
                 </div>
+                <div class="text-5xl opacity-30">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects Card -->
+        <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm opacity-90 mb-1">Total Projects</div>
+                    <div class="text-4xl font-bold">{{ total_projects }}</div>
+                    <div class="text-xs mt-2 opacity-75">
+                        {{ active_projects }} active • {{ completed_projects }} completed
+                    </div>
+                </div>
+                <div class="text-5xl opacity-30">
+                    <i class="fas fa-folder"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Card -->
+        <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm opacity-90 mb-1">Platform Revenue</div>
+                    <div class="text-4xl font-bold">₹{{ "%.0f"|format(platform_fee) }}</div>
+                    <div class="text-xs mt-2 opacity-75">
+                        10% of ₹{{ "%.0f"|format(total_revenue) }}
+                    </div>
+                </div>
+                <div class="text-5xl opacity-30">
+                    <i class="fas fa-rupee-sign"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions Card -->
+        <div class="stat-card bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm opacity-90 mb-1">Transactions</div>
+                    <div class="text-4xl font-bold">{{ total_transactions }}</div>
+                    <div class="text-xs mt-2 opacity-75">
+                        All completed payments
+                    </div>
+                </div>
+                <div class="text-5xl opacity-30">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-xl font-bold mb-4 flex items-center">
+            <i class="fas fa-bolt text-yellow-500 mr-2"></i>
+            Quick Actions
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <a href="{{ url_for('admin.users') }}"
+                class="flex flex-col items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
+                <i class="fas fa-users text-3xl text-blue-600 mb-2"></i>
+                <span class="text-sm font-semibold text-gray-700">Manage Users</span>
+            </a>
+            <a href="{{ url_for('admin.projects') }}"
+                class="flex flex-col items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition">
+                <i class="fas fa-folder text-3xl text-green-600 mb-2"></i>
+                <span class="text-sm font-semibold text-gray-700">View Projects</span>
+            </a>
+            <a href="{{ url_for('admin.transactions') }}"
+                class="flex flex-col items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
+                <i class="fas fa-money-bill-wave text-3xl text-purple-600 mb-2"></i>
+                <span class="text-sm font-semibold text-gray-700">Transactions</span>
+            </a>
+            <a href="#" class="flex flex-col items-center p-4 bg-gray-50 rounded-lg opacity-50 cursor-not-allowed">
+                <i class="fas fa-exclamation-triangle text-3xl text-gray-400 mb-2"></i>
+                <span class="text-sm font-semibold text-gray-400">Disputes (Soon)</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Recent Users -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4 flex items-center justify-between">
+                <span>
+                    <i class="fas fa-user-plus text-blue-600 mr-2"></i>
+                    Recent Users
+                </span>
+                <a href="{{ url_for('admin.users') }}" class="text-xs text-blue-600 hover:underline">
+                    View All →
+                </a>
+            </h3>
+            <div class="space-y-3">
+                {% for user in recent_users[:5] %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <img src="{{ user.profile_image or '/static/images/default-avatar.png' }}"
+                            alt="{{ user.full_name }}" class="w-10 h-10 rounded-full">
+                        <div>
+                            <div class="font-semibold text-sm">{{ user.full_name }}</div>
+                            <div class="text-xs text-gray-500">{{ user.role|title }}</div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-400">
+                        {{ user.created_at.strftime('%Y-%m-%d') }}
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm text-center py-4">No recent users</p>
                 {% endfor %}
             </div>
         </div>
-        
+
+        <!-- Recent Projects -->
         <div class="bg-white rounded-xl shadow-lg p-6">
-            <h2 class="text-xl font-bold mb-4">Recent Projects</h2>
+            <h3 class="text-lg font-bold mb-4 flex items-center justify-between">
+                <span>
+                    <i class="fas fa-folder-plus text-green-600 mr-2"></i>
+                    Recent Projects
+                </span>
+                <a href="{{ url_for('admin.projects') }}" class="text-xs text-green-600 hover:underline">
+                    View All →
+                </a>
+            </h3>
             <div class="space-y-3">
-                {% for project in recent_projects %}
-                <div class="border-b pb-2">
-                    <div class="font-semibold">{{ project.title }}</div>
-                    <div class="text-sm text-gray-500">₹{{ project.budget }} - {{ project.status|title }}</div>
+                {% for project in recent_projects[:5] %}
+                <div class="p-3 bg-gray-50 rounded-lg">
+                    <div class="font-semibold text-sm mb-1">{{ project.title[:40] }}...</div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-gray-600">₹{{ project.budget }}</span>
+                        <span
+                            class="bg-{{ 'green' if project.status == 'completed' else 'blue' if project.status == 'open' else 'yellow' }}-100 text-{{ 'green' if project.status == 'completed' else 'blue' if project.status == 'open' else 'yellow' }}-700 px-2 py-1 rounded">
+                            {{ project.status|title }}
+                        </span>
+                    </div>
                 </div>
+                {% else %}
+                <p class="text-gray-500 text-sm text-center py-4">No recent projects</p>
                 {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4 flex items-center justify-between">
+                <span>
+                    <i class="fas fa-receipt text-purple-600 mr-2"></i>
+                    Recent Payments
+                </span>
+                <a href="{{ url_for('admin.transactions') }}" class="text-xs text-purple-600 hover:underline">
+                    View All →
+                </a>
+            </h3>
+            <div class="space-y-3">
+                {% for txn in recent_transactions[:5] %}
+                <div class="p-3 bg-gray-50 rounded-lg">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-semibold text-sm">₹{{ txn.amount }}</span>
+                        <span class="text-xs text-green-600">
+                            <i class="fas fa-check-circle"></i> Completed
+                        </span>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        {{ txn.project.title[:30] }}...
+                    </div>
+                    <div class="text-xs text-gray-400 mt-1">
+                        {{ txn.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-sm text-center py-4">No recent transactions</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-bold mb-4 flex items-center">
+            <i class="fas fa-heartbeat text-red-500 mr-2"></i>
+            System Status
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center p-4 bg-green-50 rounded-lg">
+                <div class="text-3xl mb-2">✅</div>
+                <div class="text-sm font-semibold text-green-700">Database</div>
+                <div class="text-xs text-green-600">Healthy</div>
+            </div>
+            <div class="text-center p-4 bg-green-50 rounded-lg">
+                <div class="text-3xl mb-2">✅</div>
+                <div class="text-sm font-semibold text-green-700">Server</div>
+                <div class="text-xs text-green-600">Online</div>
+            </div>
+            <div class="text-center p-4 bg-green-50 rounded-lg">
+                <div class="text-3xl mb-2">✅</div>
+                <div class="text-sm font-semibold text-green-700">Payments</div>
+                <div class="text-xs text-green-600">Active</div>
+            </div>
+            <div class="text-center p-4 bg-blue-50 rounded-lg">
+                <div class="text-3xl mb-2">🔨</div>
+                <div class="text-sm font-semibold text-blue-700">Admin Panel</div>
+                <div class="text-xs text-blue-600">Phase 1/6</div>
             </div>
         </div>
     </div>
