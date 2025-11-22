@@ -183,6 +183,44 @@
 
     <!-- JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Notification System
+        async function loadNotifications() {
+            try {
+                const res = await fetch('/notifications/list');
+                if (res.ok) {
+                    const data = await res.json();
+                    const list = document.getElementById('notificationList');
+                    if (data.length === 0) {
+                        list.innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">No notifications</p>';
+                    } else {
+                        list.innerHTML = data.map(n => `<a href="${n.link || '#'}" class="block px-4 py-3 hover:bg-gray-50 border-b ${!n.is_read ? 'bg-blue-50' : ''}"><div class="font-semibold text-sm">${n.title}</div><div class="text-xs text-gray-600">${n.message}</div></a>`).join('');
+                    }
+                }
+            } catch (e) { }
+        }
+        async function updateNotifCount() {
+            try {
+                const res = await fetch('/notifications/count');
+                if (res.ok) {
+                    const { count } = await res.json();
+                    const badge = document.getElementById('notifBadge');
+                    if (count > 0) { badge.textContent = count; badge.classList.remove('hidden'); }
+                    else { badge.classList.add('hidden'); }
+                }
+            } catch (e) { }
+        }
+        const notifBtn = document.getElementById('notificationButton');
+        if (notifBtn) {
+            notifBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                document.getElementById('notificationMenu').classList.toggle('hidden');
+                loadNotifications();
+            });
+            updateNotifCount();
+            setInterval(updateNotifCount, 30000);
+        }
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 
