@@ -17,7 +17,9 @@ def customer_dashboard():
     from app import db
     
     # Posted projects with transactions
-    projects = Project.query.filter_by(posted_by_id=current_user.id).order_by(Project.created_at.desc()).all()
+    projects = Project.query.filter_by(posted_by_id=current_user.id).filter(
+        Project.deleted_at == None
+    ).order_by(Project.created_at.desc()).all()
     
     # Get transactions for each project
     project_transactions = {}
@@ -71,7 +73,9 @@ def creator_dashboard():
     
     # Active jobs (assigned to me) - Include delivered for payment tracking
     active_jobs = Project.query.filter_by(assigned_to_id=current_user.id).filter(
-        Project.status.in_(['assigned', 'in_progress', 'delivered'])
+        Project.status.in_(['assigned', 'in_progress', 'delivered']),
+        Project.deleted_at == None,
+        Project.creator_left == False
     ).all()
     
     # My applications
@@ -81,6 +85,8 @@ def creator_dashboard():
     completed_jobs = Project.query.filter_by(
         assigned_to_id=current_user.id,
         status='completed'
+    ).filter(
+        Project.deleted_at == None
     ).count()
     
     pending_applications = Application.query.filter_by(

@@ -78,6 +78,15 @@ class Project(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
     
+    # Project deletion tracking
+    deleted_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+    deletion_reason = db.Column(db.String(200), nullable=True)
+    
+    # Creator leave tracking
+    creator_left = db.Column(db.Boolean, default=False)
+    creator_left_at = db.Column(db.DateTime, nullable=True)
+    
     # Delivery fields (Drive link instead of file upload)
     delivery_link = db.Column(db.String(500))  # Google Drive/Dropbox link
     delivery_note = db.Column(db.Text)  # Creator's delivery message
