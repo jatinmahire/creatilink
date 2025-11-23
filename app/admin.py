@@ -290,18 +290,197 @@ def export_users():
 @admin_bp.route('/projects')
 @admin_required
 def projects():
-    """View all projects"""
+    """View all projects with advanced management"""
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status')
+    search = request.args.get('search')
+    min_budget = request.args.get('min_budget', type=float)
+    max_budget = request.args.get('max_budget', type=float)
     
     query = Project.query
     
+    # Filters
     if status:
         query = query.filter_by(status=status)
+    if search:
+        query = query.filter(Project.title.ilike(f'%{search}%'))
+    if min_budget:
+        query = query.filter(Project.budget >= min_budget)
+    if max_budget:
+        query = query.filter(Project.budget <= max_budget)
     
-    projects = query.order_by(Project.created_at.desc()).paginate(page=page, per_page=20, error_out=False)
+    projects_list = query.order_by(Project.created_at.desc()).paginate(page=page, per_page=20, error_out=False)
     
-    return render_template('admin/projects.html', projects=projects)
+    # Analytics
+    total_projects = Project.query.count()
+    open_projects = Project.query.filter_by(status='open').count()
+    in_progress = Project.query.filter(Project.status.in_(['assigned', 'in_progress'])).count()
+    completed = Project.query.filter_by(status='completed').count()
+    deleted = Project.query.filter(Project.deleted_at.isnot(None)).count()
+    
+    # Budget analytics
+    total_budget = db.session.query(func.sum(Project.budget)).scalar() or 0
+    avg_budget = db.session.query(func.avg(Project.budget)).scalar() or 0
+    
+    return render_template(
+        'admin/projects.html',
+        projects=projects_list,
+        total_projects=total_projects,
+        open_projects=open_projects,
+        in_progress=in_progress,
+        completed=completed,
+        deleted=deleted,
+        total_budget=total_budget,
+        avg_budget=avg_budget
+    )
+
+
+@admin_bp.route('/projects/<int:project_id>/details')
+@admin_required
+def project_details(project_id):
+    """Get project details for modal"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Get applications count
+    applications_count = Application.query.filter_by(project_id=project.id).count()
+    
+    return jsonify({
+        'success': True,
+        'project': {
+            'id': project.id,
+            'title': project.title,
+            'description': project.description,
+            'budget': project.budget,
+            'deadline': project.deadline.strftime('%Y-%m-%d') if project.deadline else 'No deadline',
+            'status': project.status,
+            'category': project.category or 'N/A',
+            'created_at': project.created_at.strftime('%Y-%m-%d %H:%M'),
+            'is_deleted': project.deleted_at is not None
+        },
+        'customer': {
+            'id': project.posted_by.id,
+            'name': project.posted_by.full_name,
+            'email': project.posted_by.email
+        },
+        'creator': {
+            'id': project.assigned_to.id if project.assigned_to else None,
+            'name': project.assigned_to.full_name if project.assigned_to else 'Not assigned',
+            'email': project.assigned_to.email if project.assigned_to else 'N/A'
+        } if project.assigned_to else None,
+        'stats': {
+            'applications': applications_count,
+            'views': 0  # TODO: Add view tracking
+        }
+    })
+
+
+@admin_bp.route('/projects/<int:project_id>/force-complete', methods=['POST'])
+@admin_required
+def force_complete_project(project_id):
+    """Force complete a project"""
+    project = Project.query.get_or_404(project_id)
+    
+    if project.status == 'completed':
+        return jsonify({'error': 'Project already completed'}), 400
+    
+    # Update project
+    project.status = 'completed'
+    
+    # Also complete transaction if exists
+    transaction = Transaction.query.filter_by(project_id=project.id).first()
+    if transaction and transaction.status != 'completed':
+        transaction.status = 'completed'
+        transaction.customer_confirmed = True
+        transaction.creator_confirmed = True
+        transaction.payment_confirmed_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    flash(f'Project "{project.title}" marked as completed', 'success')
+    return jsonify({'success': True, 'message': 'Project completed'}), 200
+
+
+@admin_bp.route('/projects/<int:project_id>/delete', methods=['POST'])
+@admin_required
+def delete_project(project_id):
+    """Soft delete a project"""
+    project = Project.query.get_or_404(project_id)
+    
+    if project.deleted_at:
+        return jsonify({'error': 'Project already deleted'}), 400
+    
+    reason = request.form.get('reason', 'Admin deletion')
+    
+    # Soft delete
+    project.deleted_at = datetime.utcnow()
+    project.deleted_by_id = current_user.id
+    project.deletion_reason = reason
+    
+    db.session.commit()
+    
+    flash(f'Project "{project.title}" has been deleted', 'success')
+    return jsonify({'success': True, 'message': 'Project deleted'}), 200
+
+
+@admin_bp.route('/projects/<int:project_id>/reassign', methods=['POST'])
+@admin_required
+def reassign_project(project_id):
+    """Reassign project to different creator"""
+    project = Project.query.get_or_404(project_id)
+    new_creator_id = request.form.get('creator_id', type=int)
+    
+    if not new_creator_id:
+        return jsonify({'error': 'Creator ID required'}), 400
+    
+    new_creator = User.query.get_or_404(new_creator_id)
+    
+    if new_creator.role != 'creator':
+        return jsonify({'error': 'User must be a creator'}), 400
+    
+    old_creator = project.assigned_to
+    project.assigned_to_id = new_creator_id
+    project.status = 'assigned'
+    
+    db.session.commit()
+    
+    flash(f'Project reassigned from {old_creator.full_name if old_creator else "None"} to {new_creator.full_name}', 'success')
+    return jsonify({'success': True, 'message': 'Project reassigned'}), 200
+
+
+@admin_bp.route('/projects/export')
+@admin_required
+def export_projects():
+    """Export all projects to CSV"""
+    import csv
+    from io import StringIO
+    from flask import make_response
+    
+    projects = Project.query.all()
+    
+    si = StringIO()
+    writer = csv.writer(si)
+    
+    # Header
+    writer.writerow(['ID', 'Title', 'Budget', 'Status', 'Customer', 'Creator', 'Created', 'Deleted'])
+    
+    # Data
+    for p in projects:
+        writer.writerow([
+            p.id,
+            p.title,
+            p.budget,
+            p.status,
+            p.posted_by.full_name,
+            p.assigned_to.full_name if p.assigned_to else 'Not assigned',
+            p.created_at.strftime('%Y-%m-%d'),
+            'Yes' if p.deleted_at else 'No'
+        ])
+    
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=projects_export.csv"
+    output.headers["Content-type"] = "text/csv"
+    
+    return output
 
 
 @admin_bp.route('/transactions')
