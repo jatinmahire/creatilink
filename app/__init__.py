@@ -134,11 +134,45 @@ def create_app(config_name='default'):
             db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_disputes_raised_by ON disputes(raised_by_id);"))
             db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);"))
             
-            # PHASE 5: Google OAuth
-            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;"))
-            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'email';"))
-            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(500);"))
-            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);"))
+            # PHASE 5: Google OAuth (More robust migration)
+            try:
+                # Check if google_id column exists
+                result = db.session.execute(text("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name='users' AND column_name='google_id'
+                """))
+                if not result.fetchone():
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN google_id VARCHAR(255) UNIQUE;"))
+                    print("✅ Added google_id column")
+            except Exception as col_error:
+                print(f"⚠️ google_id column: {col_error}")
+            
+            try:
+                result = db.session.execute(text("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name='users' AND column_name='auth_provider'
+                """))
+                if not result.fetchone():
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN auth_provider VARCHAR(20) DEFAULT 'email';"))
+                    print("✅ Added auth_provider column")
+            except Exception as col_error:
+                print(f"⚠️ auth_provider column: {col_error}")
+            
+            try:
+                result = db.session.execute(text("""
+                    SELECT column_name FROM information_schema.columns 
+                    WHERE table_name='users' AND column_name='profile_picture'
+                """))
+                if not result.fetchone():
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(500);"))
+                    print("✅ Added profile_picture column")
+            except Exception as col_error:
+                print(f"⚠️ profile_picture column: {col_error}")
+            
+            try:
+                db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);"))
+            except:
+                pass
             
             db.session.commit()
             print("✅ Payment system migration successful!")
