@@ -1,3 +1,8 @@
+# CRITICAL: Gevent monkey patch MUST be first, BEFORE any imports!
+# Disable SSL patching to prevent Python 3.10 SSL recursion bug on Render
+from gevent import monkey
+monkey.patch_all(ssl=False)
+
 import os
 from app import create_app, socketio, db
 
