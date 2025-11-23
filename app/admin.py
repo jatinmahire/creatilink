@@ -1,3 +1,14 @@
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask_login import login_required, current_user
+from datetime import datetime, timedelta
+from functools import wraps
+from sqlalchemy import func
+from app import db
+from app.models import User, Project, Transaction, Application, Review, Dispute
+
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+def admin_required(f):
     """Decorator to require admin access"""
     @wraps(f)
     @login_required
