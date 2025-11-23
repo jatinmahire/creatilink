@@ -1,3 +1,19 @@
+# CRITICAL FIX: Eventlet monkey patch MUST be before any imports!
+# Disable SSL monkey patching to prevent recursion errors with Google OAuth
+import eventlet
+eventlet.monkey_patch(os=True, select=True, socket=True, thread=True, time=True, ssl=False)
+
+import os
+from app import create_app, socketio, db
+
+# Get config from environment
+config_name = os.getenv('FLASK_ENV', 'default')
+app = create_app(config_name)
+
+# Auto-seed database for free tier (must be after app creation)
+with app.app_context():
+    from app.models import User
+    admin = User.query.filter_by(email='admin@creatilink.com').first()
     
     if not admin:
         print("=" * 50)
