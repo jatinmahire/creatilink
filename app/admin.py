@@ -1,13 +1,3 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
-from flask_login import login_required, current_user
-from functools import wraps
-from sqlalchemy import func
-from app import db
-from app.models import User, Project, Transaction, Application, Review
-
-admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
-
-def admin_required(f):
     """Decorator to require admin access"""
     @wraps(f)
     @login_required
@@ -478,3 +468,206 @@ def export_transactions():
     output.headers["Content-type"] = "text/csv"
     
     return output
+
+
+# ========== DISPUTE MANAGEMENT ==========
+
+@admin_bp.route('/disputes')
+@admin_required
+def disputes():
+    """View all disputes with priority sorting"""
+    page = request.args.get('page', 1, type=int)
+    status = request.args.get('status')
+    
+    query = Dispute.query
+    
+    if status:
+        query = query.filter_by(status=status)
+    
+    # Priority sort: open disputes first, then by age
+    disputes_list = query.order_by(
+        Dispute.status.desc(),  # Open first
+        Dispute.created_at.desc()  # Oldest first
+    ).paginate(page=page, per_page=20, error_out=False)
+    
+    # Statistics
+    total_open = Dispute.query.filter_by(status='open').count()
+    total_resolved = Dispute.query.filter_by(status='resolved').count()
+    old_disputes = Dispute.query.filter(
+        Dispute.status == 'open',
+        Dispute.created_at < datetime.utcnow() - timedelta(days=2)
+    ).count()
+    
+    return render_template(
+        'admin/disputes.html',
+        disputes=disputes_list,
+        total_open=total_open,
+        total_resolved=total_resolved,
+        old_disputes=old_disputes
+    )
+
+
+@admin_bp.route('/disputes/<int:dispute_id>/details')
+@admin_required
+def dispute_details(dispute_id):
+    """Get dispute details for modal"""
+    dispute = Dispute.query.get_or_404(dispute_id)
+    txn = dispute.transaction
+    
+    # Calculate age in hours
+    age_hours = (datetime.utcnow() - dispute.created_at).total_seconds() / 3600
+    
+    return jsonify({
+        'success': True,
+        'dispute': {
+            'id': dispute.id,
+            'type': dispute.dispute_type,
+            'description': dispute.description,
+            'status': dispute.status,
+            'created_at': dispute.created_at.strftime('%Y-%m-%d %H:%M'),
+            'resolved_at': dispute.resolved_at.strftime('%Y-%m-%d %H:%M') if dispute.resolved_at else None,
+            'resolution_notes': dispute.resolution_notes,
+            'age_hours': round(age_hours, 1)
+        },
+        'transaction': {
+            'id': txn.id,
+            'amount': txn.amount,
+            'status': txn.status
+        },
+        'project': {
+            'id': txn.project.id,
+            'title': txn.project.title,
+            'status': txn.project.status
+        },
+        'raised_by': {
+            'id': dispute.raised_by.id,
+            'name': dispute.raised_by.full_name,
+            'email': dispute.raised_by.email,
+            'role': dispute.raised_by.role
+        },
+        'customer': {
+            'id': txn.customer.id,
+            'name': txn.customer.full_name,
+            'email': txn.customer.email
+        },
+        'creator': {
+            'id': txn.creator.id,
+            'name': txn.creator.full_name,
+            'email': txn.creator.email
+        }
+    })
+
+
+@admin_bp.route('/disputes/<int:dispute_id>/resolve', methods=['POST'])
+@admin_required
+def resolve_dispute_admin(dispute_id):
+    """Admin resolves a dispute"""
+    dispute = Dispute.query.get_or_404(dispute_id)
+    
+    if dispute.status == 'resolved':
+        return jsonify({'error': 'Dispute already resolved'}), 400
+    
+    resolution_notes = request.form.get('notes')
+    
+    if not resolution_notes:
+        return jsonify({'error': 'Resolution notes required'}), 400
+    
+    # Update dispute
+    dispute.status = 'resolved'
+    dispute.resolution_notes = resolution_notes
+    dispute.resolved_by_id = current_user.id
+    dispute.resolved_at = datetime.utcnow()
+    db.session.commit()
+    
+    flash(f'Dispute #{dispute.id} resolved successfully', 'success')
+    return jsonify({'success': True, 'message': 'Dispute resolved'}), 200
+
+
+@admin_bp.route('/disputes/<int:dispute_id>/refund', methods=['POST'])
+@admin_required
+def refund_from_dispute(dispute_id):
+    """Refund transaction and resolve dispute"""
+    dispute = Dispute.query.get_or_404(dispute_id)
+    txn = dispute.transaction
+    
+    if txn.status == 'refunded':
+        return jsonify({'error': 'Transaction already refunded'}), 400
+    
+    resolution_notes = request.form.get('notes', 'Refunded by admin from dispute')
+    
+    # Refund transaction
+    txn.status = 'refunded'
+    
+    # Resolve dispute
+    dispute.status = 'resolved'
+    dispute.resolution_notes = f'REFUNDED: {resolution_notes}'
+    dispute.resolved_by_id = current_user.id
+    dispute.resolved_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    flash(f'Transaction refunded & dispute resolved. Amount: ₹{txn.amount}', 'success')
+    return jsonify({'success': True, 'message': 'Refunded and resolved'}), 200
+
+
+@admin_bp.route('/disputes/<int:dispute_id>/release', methods=['POST'])
+@admin_required
+def release_from_dispute(dispute_id):
+    """Release payment to creator and resolve dispute"""
+    dispute = Dispute.query.get_or_404(dispute_id)
+    txn = dispute.transaction
+    
+    if txn.status == 'completed':
+        return jsonify({'error': 'Transaction already completed'}), 400
+    
+    resolution_notes = request.form.get('notes', 'Payment released by admin from dispute')
+    
+    # Release payment
+    txn.status = 'completed'
+    txn.customer_confirmed = True
+    txn.creator_confirmed = True
+    txn.payment_confirmed_at = datetime.utcnow()
+    
+    # Complete project if needed
+    if txn.project.status != 'completed':
+        txn.project.status = 'completed'
+    
+    # Resolve dispute
+    dispute.status = 'resolved'
+    dispute.resolution_notes = f'PAYMENT RELEASED: {resolution_notes}'
+    dispute.resolved_by_id = current_user.id
+    dispute.resolved_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    flash(f'Payment released to creator & dispute resolved. Amount: ₹{txn.amount}', 'success')
+    return jsonify({'success': True, 'message': 'Payment released and resolved'}), 200
+
+
+@admin_bp.route('/disputes/<int:dispute_id>/ban-user/<int:user_id>', methods=['POST'])
+@admin_required
+def ban_from_dispute(dispute_id, user_id):
+    """Ban a user directly from dispute"""
+    user = User.query.get_or_404(user_id)
+    dispute = Dispute.query.get_or_404(dispute_id)
+    
+    # Prevent banning admins
+    if user.is_admin:
+        return jsonify({'error': 'Cannot ban admin users'}), 400
+    
+    reason = request.form.get('reason', f'Banned from dispute #{dispute_id}')
+    
+    # Ban user
+    user.is_active = False
+    
+    # Optionally resolve dispute
+    if dispute.status != 'resolved':
+        dispute.status = 'resolved'
+        dispute.resolution_notes = f'USER BANNED: {user.full_name} - {reason}'
+        dispute.resolved_by_id = current_user.id
+        dispute.resolved_at = datetime.utcnow()
+    
+    db.session.commit()
+    
+    flash(f'User {user.full_name} has been banned. Dispute resolved.', 'success')
+    return jsonify({'success': True, 'message': 'User banned'}), 200
