@@ -29,21 +29,34 @@ def init_oauth(app):
 @oauth_bp.route('/google')
 def google_login():
     """Initiate Google OAuth login"""
-    redirect_uri = url_for('oauth.google_callback', _external=True)
-    return oauth.google.authorize_redirect(redirect_uri)
+    try:
+        # Force HTTPS for external URLs in production
+        redirect_uri = url_for('oauth.google_callback', _external=True, _scheme='https' if os.getenv('FLASK_ENV') == 'production' else 'http')
+        print(f"DEBUG: Redirect URI = {redirect_uri}")  # Debug logging
+        print(f"DEBUG: Client ID = {os.getenv('GOOGLE_CLIENT_ID')[:20]}...")  # Show first 20 chars
+        return oauth.google.authorize_redirect(redirect_uri)
+    except Exception as e:
+        print(f"ERROR in google_login: {str(e)}")
+        flash(f'Error initiating Google login: {str(e)}', 'danger')
+        return redirect(url_for('auth.login'))
 
 
 @oauth_bp.route('/google/callback')
 def google_callback():
     """Handle Google OAuth callback"""
     try:
+        print("DEBUG: Entering Google callback")
+        
         # Get token from Google
         token = oauth.google.authorize_access_token()
+        print(f"DEBUG: Token received: {bool(token)}")
         
         # Get user info from Google
         user_info = token.get('userinfo')
+        print(f"DEBUG: User info: {bool(user_info)}")
         
         if not user_info:
+            print("ERROR: No user info in token")
             flash('Failed to get user information from Google', 'danger')
             return redirect(url_for('auth.login'))
         
@@ -51,6 +64,8 @@ def google_callback():
         email = user_info.get('email')
         full_name = user_info.get('name')
         profile_picture = user_info.get('picture')
+        
+        print(f"DEBUG: Google ID={google_id}, Email={email}, Name={full_name}")
         
         # Check if user exists by Google ID
         user = User.query.filter_by(google_id=google_id).first()
@@ -84,10 +99,15 @@ def google_callback():
             'profile_picture': profile_picture
         }
         
+        print("DEBUG: Redirecting to role selection")
         # Redirect to role selection page
         return redirect(url_for('oauth.choose_role'))
     
     except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"ERROR in google_callback: {str(e)}")
+        print(f"TRACEBACK: {error_trace}")
         flash(f'Google login failed: {str(e)}', 'danger')
         return redirect(url_for('auth.login'))
 
