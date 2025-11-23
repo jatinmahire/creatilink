@@ -850,3 +850,185 @@ def ban_from_dispute(dispute_id, user_id):
     
     flash(f'User {user.full_name} has been banned. Dispute resolved.', 'success')
     return jsonify({'success': True, 'message': 'User banned'}), 200
+
+
+# ========== ANALYTICS DASHBOARD ==========
+
+@admin_bp.route('/analytics')
+@admin_required
+def analytics():
+    """Analytics dashboard with charts"""
+    from datetime import timedelta
+    
+    # Summary stats
+    total_users = User.query.count()
+    total_projects = Project.query.count()
+    active_projects = Project.query.filter(Project.status.in_(['assigned', 'in_progress'])).count()
+    total_revenue = db.session.query(func.sum(Transaction.amount)).filter_by(status='completed').scalar() or 0
+    avg_project_value = db.session.query(func.avg(Project.budget)).scalar() or 0
+    platform_earnings = total_revenue * 0.10
+    
+    # Growth calculations (last 30 days)
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    users_last_month = User.query.filter(User.created_at >= thirty_days_ago).count()
+    users_previous_month = total_users - users_last_month
+    user_growth = ((users_last_month / users_previous_month) * 100) if users_previous_month > 0 else 0
+    
+    revenue_last_month = db.session.query(func.sum(Transaction.amount)).filter(
+        Transaction.status == 'completed',
+        Transaction.created_at >= thirty_days_ago
+    ).scalar() or 0
+   revenue_previous_month = total_revenue - revenue_last_month
+    revenue_growth = ((revenue_last_month / revenue_previous_month) * 100) if revenue_previous_month > 0 else 0
+    
+    # User growth data (last 30 days)
+    user_growth_labels = []
+    user_growth_data = []
+    for i in range(30, -1, -1):
+        date = datetime.utcnow() - timedelta(days=i)
+        count = User.query.filter(func.date(User.created_at) == date.date()).count()
+        user_growth_labels.append(date.strftime('%b %d'))
+        user_growth_data.append(count)
+    
+    # Revenue data (last 30 days)
+    revenue_labels = []
+    revenue_data = []
+    for i in range(30, -1, -1):
+        date = datetime.utcnow() - timedelta(days=i)
+        amount = db.session.query(func.sum(Transaction.amount)).filter(
+            Transaction.status == 'completed',
+            func.date(Transaction.created_at) == date.date()
+        ).scalar() or 0
+        revenue_labels.append(date.strftime('%b %d'))
+        revenue_data.append(float(amount))
+    
+    # Project activity data
+    project_labels = []
+    projects_created = []
+    projects_completed = []
+    for i in range(30, -1, -1):
+        date = datetime.utcnow() - timedelta(days=i)
+        created = Project.query.filter(func.date(Project.created_at) == date.date()).count()
+        completed = Project.query.filter(
+            func.date(Project.created_at) == date.date(),
+            Project.status == 'completed'
+        ).count()
+        project_labels.append(date.strftime('%b %d'))
+        projects_created.append(created)
+        projects_completed.append(completed)
+    
+    # Category breakdown
+    category_data_raw = db.session.query(
+        Project.category,
+        func.count(Project.id)
+    ).group_by(Project.category).all()
+    
+    category_labels = [cat if cat else 'Uncategorized' for cat, _ in category_data_raw]
+    category_data = [count for _, count in category_data_raw]
+    
+    # Top customers
+    top_customers_raw = db.session.query(
+        User,
+        func.count(Project.id).label('project_count'),
+        func.sum(Transaction.amount).label('total_spent')
+    ).join(Project, User.id == Project.posted_by_id)\
+     .join(Transaction, Project.id == Transaction.project_id)\
+     .filter(Transaction.status == 'completed')\
+     .group_by(User.id)\
+     .order_by(func.sum(Transaction.amount).desc())\
+     .limit(5).all()
+    
+    top_customers = [{
+        'full_name': user.full_name,
+        'project_count': count,
+        'total_spent': float(spent) if spent else 0
+    } for user, count, spent in top_customers_raw]
+    
+    # Top creators
+    top_creators_raw = db.session.query(
+        User,
+        func.count(Project.id).label('project_count'),
+        func.sum(Transaction.amount).label('total_earned')
+    ).join(Project, User.id == Project.assigned_to_id)\
+     .join(Transaction, Project.id == Transaction.project_id)\
+     .filter(Transaction.status == 'completed')\
+     .group_by(User.id)\
+     .order_by(func.sum(Transaction.amount).desc())\
+     .limit(5).all()
+    
+    top_creators = [{
+        'full_name': user.full_name,
+        'project_count': count,
+        'total_earned': float(earned) if earned else 0
+    } for user, count, earned in top_creators_raw]
+    
+    # Platform stats
+    completed_projects = Project.query.filter_by(status='completed').count()
+    success_rate = (completed_projects / total_projects * 100) if total_projects > 0 else 0
+    
+    # Avg completion time
+    avg_completion_days = 14  # TODO: Calculate from actual data
+    
+    # Dispute rate
+    total_disputes = Dispute.query.count()
+    total_transactions = Transaction.query.count()
+    dispute_rate = (total_disputes / total_transactions * 100) if total_transactions > 0 else 0
+    
+    return render_template(
+        'admin/analytics.html',
+        total_users=total_users,
+        user_growth=round(user_growth, 1),
+        total_revenue=total_revenue,
+        revenue_growth=round(revenue_growth, 1),
+        total_projects=total_projects,
+        active_projects=active_projects,
+        avg_project_value=avg_project_value,
+        platform_earnings=platform_earnings,
+        user_growth_labels=user_growth_labels,
+        user_growth_data=user_growth_data,
+        revenue_labels=revenue_labels,
+        revenue_data=revenue_data,
+        project_labels=project_labels,
+        projects_created=projects_created,
+        projects_completed=projects_completed,
+        category_labels=category_labels,
+        category_data=category_data,
+        top_customers=top_customers,
+        top_creators=top_creators,
+        success_rate=success_rate,
+        avg_completion_days=avg_completion_days,
+        dispute_rate=dispute_rate
+    )
+
+
+@admin_bp.route('/analytics/export')
+@admin_required
+def export_analytics():
+    """Export analytics report"""
+    import csv
+    from io import StringIO
+    from flask import make_response
+    
+    si = StringIO()
+    writer = csv.writer(si)
+    
+    # Header
+    writer.writerow(['Analytics Report - CreatiLink Admin'])
+    writer.writerow([])
+    writer.writerow(['Metric', 'Value'])
+    
+    # Data
+    total_users = User.query.count()
+    total_projects = Project.query.count()
+    total_revenue = db.session.query(func.sum(Transaction.amount)).filter_by(status='completed').scalar() or 0
+    
+    writer.writerow(['Total Users', total_users])
+    writer.writerow(['Total Projects', total_projects])
+    writer.writerow(['Total Revenue', f'₹{total_revenue}'])
+    writer.writerow(['Platform Earnings (10%)', f'₹{total_revenue * 0.10}'])
+    
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=analytics_report.csv"
+    output.headers["Content-type"] = "text/csv"
+    
+    return output

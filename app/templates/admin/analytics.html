@@ -1,0 +1,328 @@
+{% extends "admin/base.html" %}
+{% block title %}Analytics Dashboard{% endblock %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-chart-line text-indigo-600 mr-2"></i>
+            Analytics Dashboard
+        </h2>
+        <div class="flex gap-2">
+            <select id="timeRange" onchange="updateCharts()" class="px-4 py-2 border rounded-lg">
+                <option value="7">Last 7 Days</option>
+                <option value="30" selected>Last 30 Days</option>
+                <option value="90">Last 90 Days</option>
+                <option value="365">Last Year</option>
+            </select>
+            <button onclick="exportAnalytics()"
+                class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+                <i class="fas fa-download mr-2"></i>Export Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm opacity-90 mb-1">Total Users</div>
+                    <div class="text-3xl font-bold">{{ total_users }}</div>
+                    <div class="text-xs mt-2">+{{ user_growth }}% this month</div>
+                </div>
+                <i class="fas fa-users text-4xl opacity-20"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm opacity-90 mb-1">Total Revenue</div>
+                    <div class="text-3xl font-bold">₹{{ "%.0f"|format(total_revenue) }}</div>
+                    <div class="text-xs mt-2">+{{ revenue_growth }}% this month</div>
+                </div>
+                <i class="fas fa-rupee-sign text-4xl opacity-20"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm opacity-90 mb-1">Projects</div>
+                    <div class="text-3xl font-bold">{{ total_projects }}</div>
+                    <div class="text-xs mt-2">{{ active_projects }} active</div>
+                </div>
+                <i class="fas fa-folder text-4xl opacity-20"></i>
+            </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm opacity-90 mb-1">Avg Project Value</div>
+                    <div class="text-3xl font-bold">₹{{ "%.0f"|format(avg_project_value) }}</div>
+                    <div class="text-xs mt-2">Platform fee: ₹{{ "%.0f"|format(platform_earnings) }}</div>
+                </div>
+                <i class="fas fa-chart-pie text-4xl opacity-20"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- User Growth Chart -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4">
+                <i class="fas fa-user-plus text-blue-600 mr-2"></i>
+                User Growth Trend
+            </h3>
+            <canvas id="userGrowthChart" height="300"></canvas>
+        </div>
+
+        <!-- Revenue Chart -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4">
+                <i class="fas fa-money-bill-trend-up text-green-600 mr-2"></i>
+                Revenue Trends
+            </h3>
+            <canvas id="revenueChart" height="300"></canvas>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Project Activity -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4">
+                <i class="fas fa-tasks text-purple-600 mr-2"></i>
+                Project Activity
+            </h3>
+            <canvas id="projectActivityChart" height="300"></canvas>
+        </div>
+
+        <!-- Category Breakdown -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4">
+                <i class="fas fa-chart-pie text-orange-600 mr-2"></i>
+                Projects by Category
+            </h3>
+            <canvas id="categoryChart" height="300"></canvas>
+        </div>
+    </div>
+
+    <!-- Additional Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4">Top Customers</h3>
+            <div class="space-y-3">
+                {% for customer in top_customers %}
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="font-medium">{{ customer.full_name }}</div>
+                        <div class="text-xs text-gray-500">{{ customer.project_count }} projects</div>
+                    </div>
+                    <div class="text-green-600 font-bold">₹{{ customer.total_spent }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4">Top Creators</h3>
+            <div class="space-y-3">
+                {% for creator in top_creators %}
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="font-medium">{{ creator.full_name }}</div>
+                        <div class="text-xs text-gray-500">{{ creator.project_count }} projects</div>
+                    </div>
+                    <div class="text-purple-600 font-bold">₹{{ creator.total_earned }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold mb-4">Platform Stats</h3>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Success Rate</span>
+                    <span class="font-bold text-green-600">{{ "%.1f"|format(success_rate) }}%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Avg Completion Time</span>
+                    <span class="font-bold">{{ avg_completion_days }} days</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Dispute Rate</span>
+                    <span class="font-bold text-red-600">{{ "%.1f"|format(dispute_rate) }}%</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Platform Fee</span>
+                    <span class="font-bold text-indigo-600">10%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<script>
+    // Chart.js Configuration
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+    Chart.defaults.color = '#6B7280';
+
+    // User Growth Chart
+    const userGrowthCtx = document.getElementById('userGrowthChart').getContext('2d');
+    const userGrowthChart = new Chart(userGrowthCtx, {
+        type: 'line',
+        data: {
+            labels: {{ user_growth_labels| tojson }},
+    datasets: [{
+        label: 'New Users',
+        data: {{ user_growth_data| tojson }},
+        borderColor: '#3B82F6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                    ticks: {
+                    precision: 0
+                }
+            }
+        }
+    }
+});
+
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    const revenueChart = new Chart(revenueCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ revenue_labels| tojson }},
+    datasets: [{
+        label: 'Revenue (₹)',
+        data: {{ revenue_data| tojson }},
+        backgroundColor: '#10B981',
+        borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                    ticks: {
+                    callback: function(value) {
+                        return '₹' + value.toLocaleString();
+                    }
+                }
+            }
+        }
+    }
+});
+
+    // Project Activity Chart
+    const projectActivityCtx = document.getElementById('projectActivityChart').getContext('2d');
+    const projectActivityChart = new Chart(projectActivityCtx, {
+        type: 'line',
+        data: {
+            labels: {{ project_labels| tojson }},
+    datasets: [
+        {
+            label: 'Created',
+            data: {{ projects_created| tojson }},
+        borderColor: '#8B5CF6',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        fill: true,
+        tension: 0.4
+            },
+        {
+            label: 'Completed',
+            data: {{ projects_completed| tojson }},
+        borderColor: '#10B981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: true,
+        tension: 0.4
+            }
+    ]
+    },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                scales: {
+            y: {
+                beginAtZero: true,
+                    ticks: {
+                    precision: 0
+                }
+            }
+        }
+    }
+});
+
+    // Category Pie Chart
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    const categoryChart = new Chart(categoryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ category_labels| tojson }},
+    datasets: [{
+        data: {{ category_data| tojson }},
+        backgroundColor: [
+        '#3B82F6',
+        '#10B981',
+        '#F59E0B',
+        '#EF4444',
+        '#8B5CF6',
+        '#EC4899',
+        '#14B8A6',
+        '#F97316'
+    ]
+        }]
+    },
+    options: {
+        responsive: true,
+            maintainAspectRatio: false,
+                plugins: {
+            legend: {
+                position: 'right'
+            }
+        }
+    }
+});
+
+    // Update charts based on time range
+    function updateCharts() {
+        const timeRange = document.getElementById('timeRange').value;
+        // TODO: Implement AJAX call to fetch new data
+        console.log('Updating charts for range:', timeRange);
+    }
+
+    // Export analytics
+    function exportAnalytics() {
+        window.location.href = '/admin/analytics/export';
+    }
+</script>
+{% endblock %}
