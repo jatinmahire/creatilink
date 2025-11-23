@@ -28,6 +28,10 @@ class Config:
     SOCKETIO_MESSAGE_QUEUE = os.environ.get('SOCKETIO_MESSAGE_QUEUE')
     SOCKETIO_ASYNC_MODE = 'eventlet'
     
+    # Google OAuth settings
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+    
     # Pagination
     PROJECTS_PER_PAGE = 12
     MESSAGES_PER_PAGE = 50

@@ -14,30 +14,61 @@ def init_oauth(app):
     """Initialize OAuth with Flask app"""
     oauth.init_app(app)
     
+    # Get credentials from environment
+    client_id = app.config.get('GOOGLE_CLIENT_ID') or os.getenv('GOOGLE_CLIENT_ID')
+    client_secret = app.config.get('GOOGLE_CLIENT_SECRET') or os.getenv('GOOGLE_CLIENT_SECRET')
+    
+    print(f"DEBUG: Initializing OAuth with Client ID: {client_id[:20] if client_id else 'NONE'}...")
+    print(f"DEBUG: Client Secret exists: {bool(client_secret)}")
+    
+    if not client_id or not client_secret:
+        print("WARNING: Google OAuth credentials not found in environment!")
+        return
+    
     # Register Google OAuth
-    oauth.register(
-        name='google',
-        client_id=os.getenv('GOOGLE_CLIENT_ID'),
-        client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
-        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-        client_kwargs={
-            'scope': 'openid email profile'
-        }
-    )
+    try:
+        oauth.register(
+            name='google',
+            client_id=client_id,
+            client_secret=client_secret,
+            server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+            client_kwargs={
+                'scope': 'openid email profile'
+            }
+        )
+        print("DEBUG: Google OAuth registered successfully")
+    except Exception as e:
+        print(f"ERROR: Failed to register Google OAuth: {str(e)}")
 
 
 @oauth_bp.route('/google')
 def google_login():
     """Initiate Google OAuth login"""
     try:
+        # Check if OAuth client is registered
+        if not hasattr(oauth, 'google'):
+            print("ERROR: Google OAuth client not registered!")
+            flash('Google login is not configured. Please contact support.', 'danger')
+            return redirect(url_for('auth.login'))
+        
+        # Check credentials
+        client_id = os.getenv('GOOGLE_CLIENT_ID')
+        if not client_id:
+            print("ERROR: GOOGLE_CLIENT_ID not found in environment")
+            flash('Google login is not configured. Please contact support.', 'danger')
+            return redirect(url_for('auth.login'))
+        
         # Force HTTPS for external URLs in production
         redirect_uri = url_for('oauth.google_callback', _external=True, _scheme='https' if os.getenv('FLASK_ENV') == 'production' else 'http')
-        print(f"DEBUG: Redirect URI = {redirect_uri}")  # Debug logging
-        print(f"DEBUG: Client ID = {os.getenv('GOOGLE_CLIENT_ID')[:20]}...")  # Show first 20 chars
+        print(f"DEBUG: Redirect URI = {redirect_uri}")
+        print(f"DEBUG: Client ID = {client_id[:20]}...")
+        
         return oauth.google.authorize_redirect(redirect_uri)
     except Exception as e:
+        import traceback
         print(f"ERROR in google_login: {str(e)}")
-        flash(f'Error initiating Google login: {str(e)}', 'danger')
+        print(f"TRACEBACK: {traceback.format_exc()}")
+        flash(f'Error initiating Google login. Please try again or use email/password login.', 'danger')
         return redirect(url_for('auth.login'))
 
 
