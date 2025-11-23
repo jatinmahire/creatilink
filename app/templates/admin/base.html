@@ -3,62 +3,21 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Admin Panel{% endblock %} - CreatiLink</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .sidebar-link.active {
-            background-color: #FFA500;
-            color: white;
-        }
-
-        .stat-card {
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-    </style>
-</head>
-
-<body class="bg-gray-100">
-    <!-- Top Header -->
-    <div class="bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg">
-        <div class="flex items-center justify-between px-6 py-4">
-            <nav class="space-y-2">
-            </nav>
-
-            <!-- Phase Progress -->
-            <div class="mt-8 p-4 bg-gray-800 rounded">
-                <div class="text-xs text-gray-400 mb-2">Implementation Progress</div>
-                <div class="w-full bg-gray-700 rounded-full h-2">
-                    <div class="bg-orange-500 h-2 rounded-full" style="width: 17%"></div>
-                </div>
-                <div class="text-xs text-gray-400 mt-2">Phase 1/6 Complete</div>
-            </div>
+    {% if messages %}
+    <div class="mb-6">
+        {% for category, message in messages %}
+        <div
+            class="bg-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'blue' }}-100 border border-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'blue' }}-400 text-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'blue' }}-700 px-4 py-3 rounded mb-2">
+            {{ message }}
         </div>
-
-        <!-- Main Content -->
-        <div class="flex-1 p-8">
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            <div class="mb-6">
-                {% for category, message in messages %}
-                <div
-                    class="bg-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'blue' }}-100 border border-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'blue' }}-400 text-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'blue' }}-700 px-4 py-3 rounded mb-2">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-            {% endwith %}
-
-            {% block content %}{% endblock %}
-        </div>
+        {% endfor %}
     </div>
-</body>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+    </div>
+    </div>
+    </body>
 
 </html>
