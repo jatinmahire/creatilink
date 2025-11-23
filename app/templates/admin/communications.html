@@ -1,0 +1,439 @@
+{% extends "admin/base.html" %}
+{% block title %}Communications{% endblock %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div class="flex justify-between items-center">
+        <h2 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-envelope text-blue-600 mr-2"></i>
+            Communication Center
+        </h2>
+    </div>
+
+    <!-- Communication Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="text-sm opacity-90 mb-1">Total Sent</div>
+            <div class="text-3xl font-bold">{{ total_sent }}</div>
+            <div class="text-xs mt-2">All time</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="text-sm opacity-90 mb-1">This Month</div>
+            <div class="text-3xl font-bold">{{ month_sent }}</div>
+            <div class="text-xs mt-2">Last 30 days</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="text-sm opacity-90 mb-1">Active Users</div>
+            <div class="text-3xl font-bold">{{ active_users }}</div>
+            <div class="text-xs mt-2">Can receive emails</div>
+        </div>
+
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
+            <div class="text-sm opacity-90 mb-1">Templates</div>
+            <div class="text-3xl font-bold">{{ template_count }}</div>
+            <div class="text-xs mt-2">Saved templates</div>
+        </div>
+    </div>
+
+    <!-- Send Notification Form -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-xl font-bold mb-4">
+            <i class="fas fa-paper-plane text-blue-600 mr-2"></i>
+            Send Notification
+        </h3>
+
+        <form method="POST" action="{{ url_for('admin.send_notification') }}" id="notificationForm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Recipient Type -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Send To</label>
+                    <select name="recipient_type" id="recipientType" required
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Recipients...</option>
+                        <option value="all">All Users</option>
+                        <option value="customers">All Customers</option>
+                        <option value="creators">All Creators</option>
+                        <option value="active">Active Users Only</option>
+                        <option value="individual">Individual User (by ID)</option>
+                    </select>
+                </div>
+
+                <!-- Individual User ID (hidden by default) -->
+                <div id="userIdField" class="hidden">
+                    <label class="block text-sm font-semibold mb-2">User ID</label>
+                    <input type="number" name="user_id"
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter user ID">
+                </div>
+
+                <!-- Notification Type -->
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Type</label>
+                    <select name="notification_type" required
+                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="success">Success</option>
+                        <option value="announcement">Announcement</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Subject -->
+            <div class="mb-4">
+                <label class="block text-sm font-semibold mb-2">Subject</label>
+                <input type="text" name="subject" required
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Notification subject">
+            </div>
+
+            <!-- Message -->
+            <div class="mb-4">
+                <label class="block text-sm font-semibold mb-2">Message</label>
+                <textarea name="message" required rows="5"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Write your message here..."></textarea>
+            </div>
+
+            <!-- Template Selection -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-2">Or Use Template</label>
+                <select id="templateSelect" onchange="loadTemplate()"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">Select a template...</option>
+                    {% for template in templates %}
+                    <option value="{{ template.id }}" data-subject="{{ template.subject }}"
+                        data-message="{{ template.message }}">
+                        {{ template.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3">
+                <button type="submit"
+                    class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-semibold">
+                    <i class="fas fa-paper-plane mr-2"></i>Send Notification
+                </button>
+                <button type="button" onclick="saveAsTemplate()"
+                    class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700">
+                    <i class="fas fa-save mr-2"></i>Save as Template
+                </button>
+                <button type="button" onclick="previewNotification()"
+                    class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700">
+                    <i class="fas fa-eye mr-2"></i>Preview
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Communication History -->
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b">
+            <h3 class="text-xl font-bold">
+                <i class="fas fa-history text-gray-600 mr-2"></i>
+                Communication History
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Subject</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Recipients</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Sent By</th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for comm in communications %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {{ comm.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="font-semibold text-gray-900">{{ comm.subject }}</div>
+                            <div class="text-xs text-gray-500">{{ comm.message[:50] }}...</div>
+                        </td>
+                        <td class="px-6 py-4 text-sm">
+                            <span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-700">
+                                {{ comm.recipient_type|title }}
+                            </span>
+                            {% if comm.recipient_count %}
+                            <span class="text-xs text-gray-500">({{ comm.recipient_count }} users)</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="px-2 py-1 rounded text-xs
+                                         bg-{{ 'blue' if comm.type == 'info' else 'yellow' if comm.type == 'warning' else 'green' if comm.type == 'success' else 'purple' }}-100 
+                                         text-{{ 'blue' if comm.type == 'info' else 'yellow' if comm.type == 'warning' else 'green' if comm.type == 'success' else 'purple' }}-700">
+                                {{ comm.type|title }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {{ comm.sent_by.full_name }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex justify-center space-x-2">
+                                <button onclick="viewCommunication({{ comm.id }})"
+                                    class="text-blue-600 hover:text-blue-800" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button onclick="resendCommunication({{ comm.id }})"
+                                    class="text-green-600 hover:text-green-800" title="Resend">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-envelope text-4xl mb-4 opacity-50"></i>
+                            <p>No communications sent yet</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Templates Management -->
+    <div class="bg-white rounded-xl shadow-lg p-6">
+        <h3 class="text-xl font-bold mb-4">
+            <i class="fas fa-file-alt text-purple-600 mr-2"></i>
+            Saved Templates
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% for template in templates %}
+            <div class="border rounded-lg p-4 hover:shadow-md transition">
+                <h4 class="font-bold mb-2">{{ template.name }}</h4>
+                <p class="text-sm text-gray-600 mb-2">{{ template.subject }}</p>
+                <p class="text-xs text-gray-500 mb-3">{{ template.message[:80] }}...</p>
+                <div class="flex gap-2">
+                    <button onclick="useTemplate({{ template.id }})"
+                        class="flex-1 text-xs bg-blue-600 text-white px-3 py-2 rounded hover:bg-blue-700">
+                        Use
+                    </button>
+                    <button onclick="deleteTemplate({{ template.id }})"
+                        class="text-xs bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-span-3 text-center text-gray-500 py-8">
+                No templates saved yet
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- View Communication Modal -->
+<div id="viewModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+            class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex justify-between items-center">
+            <h3 class="text-xl font-bold"><i class="fas fa-envelope-open mr-2"></i>Communication Details</h3>
+            <button onclick="closeViewModal()" class="text-white hover:text-gray-200">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <div id="viewContent" class="p-6">
+            <!-- Will be populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Save Template Modal -->
+<div id="saveTemplateModal"
+    class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <h3 class="text-xl font-bold mb-4 text-purple-600">
+            <i class="fas fa-save mr-2"></i>Save as Template
+        </h3>
+        <form method="POST" action="{{ url_for('admin.save_template') }}">
+            <input type="hidden" name="subject" id="templateSubject">
+            <input type="hidden" name="message" id="templateMessage">
+
+            <div class="mb-4">
+                <label class="block text-sm font-semibold mb-2">Template Name</label>
+                <input type="text" name="name" required
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                    placeholder="e.g., Monthly Newsletter">
+            </div>
+
+            <div class="flex gap-3">
+                <button type="button" onclick="closeSaveTemplateModal()"
+                    class="flex-1 px-4 py-2 border rounded hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="submit" class="flex-1 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+                    Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Show/hide user ID field based on recipient type
+    document.getElementById('recipientType').addEventListener('change', function () {
+        const userIdField = document.getElementById('userIdField');
+        if (this.value === 'individual') {
+            userIdField.classList.remove('hidden');
+        } else {
+            userIdField.classList.add('hidden');
+        }
+    });
+
+    // Load template
+    function loadTemplate() {
+        const select = document.getElementById('templateSelect');
+        const option = select.options[select.selectedIndex];
+
+        if (option.value) {
+            document.querySelector('[name="subject"]').value = option.dataset.subject;
+            document.querySelector('[name="message"]').value = option.dataset.message;
+        }
+    }
+
+    // Save as template
+    function saveAsTemplate() {
+        const subject = document.querySelector('[name="subject"]').value;
+        const message = document.querySelector('[name="message"]').value;
+
+        if (!subject || !message) {
+            alert('Please fill in subject and message first');
+            return;
+        }
+
+        document.getElementById('templateSubject').value = subject;
+        document.getElementById('templateMessage').value = message;
+        document.getElementById('saveTemplateModal').classList.remove('hidden');
+    }
+
+    function closeSaveTemplateModal() {
+        document.getElementById('saveTemplateModal').classList.add('hidden');
+    }
+
+    // Preview notification
+    function previewNotification() {
+        const subject = document.querySelector('[name="subject"]').value;
+        const message = document.querySelector('[name="message"]').value;
+        const type = document.querySelector('[name="notification_type"]').value;
+
+        alert(`Preview:\n\nSubject: ${subject}\nType: ${type}\n\nMessage:\n${message}`);
+    }
+
+    // View communication details
+    async function viewCommunication(id) {
+        try {
+            const res = await fetch(`/admin/communications/${id}/details`);
+            const data = await res.json();
+
+            if (data.success) {
+                const c = data.communication;
+
+                const html = `
+                <div class="space-y-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-bold text-lg mb-2">${c.subject}</h4>
+                        <div class="text-sm text-gray-600">
+                            <span class="font-medium">Type:</span> ${c.type} | 
+                            <span class="font-medium">Sent to:</span> ${c.recipient_type}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5 class="font-semibold mb-2">Message:</h5>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="whitespace-pre-wrap">${c.message}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="font-medium">Sent by:</span> ${c.sent_by}
+                        </div>
+                        <div>
+                            <span class="font-medium">Date:</span> ${c.created_at}
+                        </div>
+                        <div>
+                            <span class="font-medium">Recipients:</span> ${c.recipient_count || 'N/A'}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+                document.getElementById('viewContent').innerHTML = html;
+                document.getElementById('viewModal').classList.remove('hidden');
+            }
+        } catch (error) {
+            alert('Error loading communication details');
+        }
+    }
+
+    function closeViewModal() {
+        document.getElementById('viewModal').classList.add('hidden');
+    }
+
+    // Resend communication
+    async function resendCommunication(id) {
+        if (!confirm('Resend this communication to the same recipients?')) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/admin/communications/${id}/resend`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                alert('Communication resent successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to resend'));
+            }
+        } catch (error) {
+            alert('Error resending communication');
+        }
+    }
+
+    // Delete template
+    async function deleteTemplate(id) {
+        if (!confirm('Delete this template?')) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/admin/templates/${id}/delete`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to delete'));
+            }
+        } catch (error) {
+            alert('Error deleting template');
+        }
+    }
+
+    // Use template
+    function useTemplate(id) {
+        document.getElementById('templateSelect').value = id;
+        loadTemplate();
+    }
+</script>
+{% endblock %}
