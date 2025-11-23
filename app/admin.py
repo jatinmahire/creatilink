@@ -889,7 +889,7 @@ def analytics():
         Transaction.status == 'completed',
         Transaction.created_at >= thirty_days_ago
     ).scalar() or 0
-   revenue_previous_month = total_revenue - revenue_last_month
+    revenue_previous_month = total_revenue - revenue_last_month
     revenue_growth = ((revenue_last_month / revenue_previous_month) * 100) if revenue_previous_month > 0 else 0
     
     # User growth data (last 30 days)
