@@ -1,8 +1,3 @@
-# CRITICAL FIX: Eventlet monkey patch MUST be before any imports!
-# Disable SSL monkey patching to prevent recursion errors with Google OAuth
-import eventlet
-eventlet.monkey_patch(os=True, select=True, socket=True, thread=True, time=True, ssl=False)
-
 import os
 from app import create_app, socketio, db
 
