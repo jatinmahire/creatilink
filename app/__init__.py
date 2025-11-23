@@ -49,6 +49,7 @@ def create_app(config_name='default'):
     from app.admin import admin_bp
     from app.payment_history import payment_history_bp
     from app.disputes import disputes_bp
+    from app.oauth import oauth_bp, init_oauth
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -59,6 +60,10 @@ def create_app(config_name='default'):
     app.register_blueprint(admin_bp)
     app.register_blueprint(payment_history_bp)
     app.register_blueprint(disputes_bp)
+    app.register_blueprint(oauth_bp)
+    
+    # Initialize OAuth
+    init_oauth(app)
     
     # Register SocketIO events
     from app import socket_events
@@ -129,9 +134,15 @@ def create_app(config_name='default'):
             db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_disputes_raised_by ON disputes(raised_by_id);"))
             db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);"))
             
+            # PHASE 5: Google OAuth
+            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'email';"))
+            db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(500);"))
+            db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);"))
+            
             db.session.commit()
             print("✅ Payment system migration successful!")
-            print("✅ Phase 1-4 migrations successful!")
+            print("✅ Phase 1-5 migrations successful (including Google OAuth)!")
         except Exception as e:
             print(f"⚠️ Migration error: {e}")
             db.session.rollback()

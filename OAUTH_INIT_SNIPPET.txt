@@ -1,0 +1,13 @@
+"""
+OAuth registration snippet for __init__.py
+Add after line 51 (after disputes_bp import)
+"""
+
+# Line 52: Add import
+from app.oauth import oauth_bp, init_oauth
+
+# Line 61-63: Add after disputes registration
+app.register_blueprint(oauth_bp)
+
+# Initialize OAuth
+init_oauth(app)

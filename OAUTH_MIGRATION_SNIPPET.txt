@@ -1,0 +1,15 @@
+"""
+Google OAuth migration snippet for __init__.py
+Add after line 136 (after dispute migrations)
+"""
+
+# PHASE 5: Google OAuth
+db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;"))
+db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'email';"))
+db.session.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(500);"))
+db.session.execute(text("CREATE INDEX IF NOT EXISTS idx_users
+
+_google_id ON users(google_id);"))
+
+# Update success message on line 139
+print("✅ Phase 1-5 migrations successful!")
