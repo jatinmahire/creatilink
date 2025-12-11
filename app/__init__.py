@@ -37,6 +37,33 @@ def create_app(config_name='default'):
     @login_manager.user_loader
     def load_user(user_id):
         from app.models import User
+        return User.query.get(int(user_id))
+    
+    # Register blueprints
+    from app.auth import auth_bp
+    from app.main import main_bp
+    from app.projects import projects_bp
+    from app.chat import chat_bp
+    from app.payments import payments_bp
+    from app.dashboard import dashboard_bp
+    from app.admin import admin_bp
+    from app.payment_history import payment_history_bp
+    from app.disputes import disputes_bp
+    from app.oauth import oauth_bp, init_oauth
+    
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(main_bp)
+    app.register_blueprint(projects_bp)
+    app.register_blueprint(chat_bp)
+    app.register_blueprint(payments_bp)
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(payment_history_bp)
+    app.register_blueprint(disputes_bp)
+    app.register_blueprint(oauth_bp)
+    
+    # Initialize OAuth
+    init_oauth(app)
     
     # Register SocketIO events
     from app import socket_events
