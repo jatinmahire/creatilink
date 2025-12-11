@@ -62,6 +62,10 @@ def create_app(config_name='default'):
     app.register_blueprint(disputes_bp)
     app.register_blueprint(oauth_bp)
     
+    # Register manual migration blueprint (for Render setup)
+    from app.manual_migration import migration_bp
+    app.register_blueprint(migration_bp)
+    
     # Initialize OAuth
     init_oauth(app)
     
